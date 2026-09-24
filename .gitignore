@@ -1,0 +1,9 @@
+/build/
+/dist/
+*.exe
+*.pdb
+*.user
+*.tmp
+.vs/
+preferences.xml
+/images/

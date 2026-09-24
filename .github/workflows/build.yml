@@ -1,0 +1,41 @@
+name: Build and release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build and test
+        shell: pwsh
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { (Get-Content VERSION).Trim() }
+          ./build.ps1 -Version $version -Repository $env:REPOSITORY -Test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChatBureau-Windows
+          path: dist/*
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create $env:RELEASE_TAG dist/ChatBureau.exe dist/ChatBureau.exe.sha256 dist/ChatBureau-Windows.zip --verify-tag --title "ChatBureau $env:RELEASE_TAG" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Publication échouée' }
