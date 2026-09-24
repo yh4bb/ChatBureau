@@ -1,6 +1,8 @@
-# ChatBureau
+﻿# ChatBureau
 
 Un compagnon de bureau pour Windows, personnalisable et compatible avec vos images PNG.
+
+Interface inspirée d’iOS : cartes arrondies, aperçu pastel et navigation par catégories.
 
 ## Utilisation
 
@@ -10,7 +12,7 @@ Téléchargez `ChatBureau.exe` depuis **Releases**, placez-le dans un dossier o�
 - Import PNG transparent, proportions conservées, image copiée localement à l'enregistrement.
 - Promenade, sieste, saut, étirement, toilette, salut, danse, pirouette, rebonds, secousse et bâillement.
 - Clic pour caresser, glisser pour porter, clic droit pour accéder aux options.
-- Clic droit → **Mises à jour** pour vérifier, télécharger et installer une nouvelle version.
+- Catégorie **Mises à jour** dans l’atelier → **Rechercher** → **Installer et redémarrer**, sans ouvrir le navigateur. Le clic droit → **Mises à jour** ouvre directement cette catégorie.
 
 Un PNG s'anime comme une image entière, sans animation indépendante des membres. Limites d'import : 16 Mo et 4 096 × 4 096 pixels.
 

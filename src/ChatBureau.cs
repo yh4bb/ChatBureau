@@ -35,7 +35,7 @@ static class Program {
    try{var release=Updates.Latest();if(release==null)throw new Exception("No newer release available");string file=Updates.Download(release,args[1]);System.IO.File.WriteAllText(System.IO.Path.Combine(args[1],"live-update-result.txt"),"Verified GitHub release "+release.Version+"; SHA-256 and executable version match.");}catch(Exception ex){System.IO.Directory.CreateDirectory(args[1]);System.IO.File.WriteAllText(System.IO.Path.Combine(args[1],"live-update-error.txt"),ex.ToString());Environment.Exit(1);}return;
   }
   var cat=new Cat();
-  if(args.Length==0)cat.Shown+=delegate {cat.ShowStudio();Updates.AutoCheck();};
+  if(args.Length==0)cat.Shown+=delegate {cat.ShowStudio();Updates.AutoCheck(cat.ShowUpdates);};
   if(args.Length>0 && args[0]=="--smoke-test")cat.StartSmokeTest();
   Application.Run(cat);
  }
@@ -44,6 +44,7 @@ class Cat : Form {
  public Preferences Options=Preferences.Load();
  Studio studio;
  public void ShowStudio() {if(studio==null||studio.IsDisposed)studio=new Studio(this);studio.Show();studio.Activate();}
+ public void ShowUpdates(Updates.Release release=null){ShowStudio();studio.OpenUpdates(release);}
  public void ApplyOptions(Preferences value) {
   value.Validate();Options=value.Copy();coat=Color.FromArgb(Options.Coat);scale=Options.Size/100f;
   int bottom=Bottom;ClientSize=new Size((int)(160*scale),(int)(140*scale));Top=bottom-Height;
@@ -79,7 +80,7 @@ class Cat : Form {
   pauseItem = new ToolStripMenuItem("Mettre en pause", null, delegate { paused = !paused; pauseItem.Checked = paused; });
   menu.Items.Add("ChatBureau · votre petit compagnon").Enabled = false;
   menu.Items.Add("Personnaliser le chat…",null,delegate {ShowStudio();});
-  menu.Items.Add("Mises à jour…",null,delegate {UpdateWindow.Open();});
+  menu.Items.Add("Mises à jour…",null,delegate {ShowUpdates();});
   menu.Items.Add(pauseItem);
   menu.Items.Add("Caresser", null, delegate { affection = 75; sleeping = false; action="Marche"; nextAction=120; });
   var animations = new ToolStripMenuItem("Animations");
@@ -255,6 +256,7 @@ class Cat : Form {
  }
 }
 }
+
 
 
 

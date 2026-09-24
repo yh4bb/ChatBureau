@@ -72,15 +72,16 @@ namespace ChatBureau {
     try{Process.Start(new ProcessStartInfo(target){UseShellExecute=false,WorkingDirectory=Path.GetDirectoryName(target)});}catch{File.Copy(target+".previous",target,true);throw;}
    }catch(Exception ex){MessageBox.Show("Installation interrompue : "+ex.Message+"\nLe fichier téléchargé reste disponible dans :\n"+Path.GetDirectoryName(Exe),"ChatBureau",MessageBoxButtons.OK,MessageBoxIcon.Warning);}
   }
-  public static async void AutoCheck(){
+  public static async void AutoCheck(Action<Release> show=null){
    if(string.IsNullOrEmpty(BuildInfo.Repository)||!Automatic)return;
    try{
     string file=Path.Combine(Root,"last-update-check");if(File.Exists(file)&&DateTime.UtcNow-File.GetLastWriteTimeUtc(file)<TimeSpan.FromDays(1))return;
     Directory.CreateDirectory(Root);File.WriteAllText(file,DateTime.UtcNow.ToString("O"));
-    var release=await Task.Run(()=>Latest());if(release!=null)UpdateWindow.Open(release);
+    var release=await Task.Run(()=>Latest());if(release!=null){if(show!=null)show(release);else UpdateWindow.Open(release);}
    }catch{ /* Offline startup must not interrupt the companion. Manual check shows details. */ }
   }
   public static void Tests(string directory){
+   UpdatePane.TestStates();
    Directory.CreateDirectory(directory);
    if(!IsNewer("v1.10.0","1.9.0")||IsNewer("v1.0.0","1.0.0")||IsNewer("invalid","1.0.0"))throw new Exception("Version comparison failed");
    string digest=new string('a',64);
@@ -99,25 +100,8 @@ namespace ChatBureau {
   }
  }
  class UpdateWindow:Form {
-  static UpdateWindow current;
-  Updates.Release release;
-  readonly Label status=new Label();readonly Button install=new Button();readonly Button check=new Button();bool busy;
-  public static void Open(Updates.Release available=null){if(current==null||current.IsDisposed)current=new UpdateWindow(available);current.Show();current.Activate();}
-  UpdateWindow(Updates.Release available){
-   release=available;Text="ChatBureau · Mises à jour";Font=new Font("Segoe UI",10);ClientSize=new Size(520,265);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;
-   Controls.Add(new Label{Text="ChatBureau "+BuildInfo.Version,Font=new Font("Segoe UI",18,FontStyle.Bold),AutoSize=true,Location=new Point(20,16)});
-   status.SetBounds(22,62,475,80);status.Text=available==null?"Vérifiez si une nouvelle version est disponible.":"Version "+available.Version+" disponible.";Controls.Add(status);
-   var auto=new CheckBox{Text="Vérifier chaque jour au lancement",Checked=Updates.Automatic,AutoSize=true,Location=new Point(22,153)};auto.CheckedChanged+=delegate{try{Updates.Automatic=auto.Checked;}catch(Exception ex){status.Text=ex.Message;}};Controls.Add(auto);
-   check.Text="Vérifier";check.SetBounds(22,204,125,35);check.Click+=async delegate{busy=true;check.Enabled=false;status.Text="Consultation de GitHub…";try{release=await Task.Run(()=>Updates.Latest());status.Text=release==null?"Vous disposez de la dernière version stable.":"Version "+release.Version+" disponible.";install.Enabled=release!=null;}catch(Exception ex){status.Text="Vérification impossible : "+ex.Message;}finally{check.Enabled=true;busy=false;}};Controls.Add(check);
-   install.Text="Installer";install.SetBounds(162,204,145,35);install.Enabled=release!=null;Controls.Add(install);
-   install.Click+=async delegate{
-    busy=true;install.Enabled=false;check.Enabled=false;status.Text="Téléchargement et vérification…";
-    try{string file=await Task.Run(()=>Updates.Download(release));status.Text="Installation : le chat va redémarrer.";
-     Process.Start(new ProcessStartInfo(file,"--apply-update \""+Updates.Exe+"\" "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true});busy=false;Application.Exit();
-    }catch(Exception ex){status.Text="Mise à jour impossible : "+ex.Message;busy=false;install.Enabled=true;check.Enabled=true;}
-   };
-   FormClosing+=delegate(object sender,FormClosingEventArgs e){if(busy)e.Cancel=true;};
-  }
+  static UpdateWindow current;readonly UpdatePane pane;
+  public static void Open(Updates.Release release=null){if(current==null||current.IsDisposed)current=new UpdateWindow();if(release!=null)current.pane.Offer(release);current.Show();current.Activate();}
+  UpdateWindow(){Text="ChatBureau · Mises à jour";BackColor=Ios.Background;ClientSize=new Size(570,540);StartPosition=FormStartPosition.CenterScreen;pane=new UpdatePane{Dock=DockStyle.Fill};Controls.Add(pane);FormClosing+=delegate(object sender,FormClosingEventArgs e){if(pane.Busy)e.Cancel=true;};}
  }
 }
-
