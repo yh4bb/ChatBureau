@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 namespace ChatBureau {
 static class Program {
  [STAThread] static void Main(string[] args) {
+  if(args.Length>0 && args[0]=="--ui-test")Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
   Application.EnableVisualStyles();
   Application.SetCompatibleTextRenderingDefault(false);
   if(args.Length>0 && args[0]=="--apply-update"){Updates.Install(args);return;}
@@ -256,6 +257,7 @@ class Cat : Form {
  }
 }
 }
+
 
 
 

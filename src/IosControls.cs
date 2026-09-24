@@ -6,14 +6,21 @@ using System.Collections.ObjectModel;
 
 namespace ChatBureau {
  static class Ios {
-  public static readonly Color Background=Color.FromArgb(245,245,250),Blue=Color.FromArgb(0,122,255),Ink=Color.FromArgb(29,29,33),Muted=Color.FromArgb(115,115,128);
-  public static GraphicsPath Round(RectangleF r,float radius){var p=new GraphicsPath();float d=Math.Min(radius*2,Math.Min(r.Width,r.Height));p.AddArc(r.X,r.Y,d,d,180,90);p.AddArc(r.Right-d,r.Y,d,d,270,90);p.AddArc(r.Right-d,r.Bottom-d,d,d,0,90);p.AddArc(r.X,r.Bottom-d,d,d,90,90);p.CloseFigure();return p;}
+  public static readonly Color Background=Color.FromArgb(245,246,248),Blue=Color.FromArgb(0,100,219),Ink=Color.FromArgb(29,32,39),Muted=Color.FromArgb(91,98,113),Field=Color.FromArgb(244,245,248),Line=Color.FromArgb(228,231,238);
+  public static GraphicsPath Round(RectangleF r,float radius){var p=new GraphicsPath();if(r.Width<=0||r.Height<=0)return p;float d=Math.Max(0.01f,Math.Min(radius*2,Math.Min(r.Width,r.Height)));p.AddArc(r.X,r.Y,d,d,180,90);p.AddArc(r.Right-d,r.Y,d,d,270,90);p.AddArc(r.Right-d,r.Bottom-d,d,d,0,90);p.AddArc(r.X,r.Bottom-d,d,d,90,90);p.CloseFigure();return p;}
  }
  class IosButton:Button {
   bool hover,down;
   public IosButton(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;BackColor=Color.FromArgb(238,242,255);ForeColor=Ios.Blue;Cursor=Cursors.Hand;}
   protected override void OnMouseEnter(EventArgs e){hover=true;Invalidate();base.OnMouseEnter(e);}protected override void OnMouseLeave(EventArgs e){hover=false;Invalidate();base.OnMouseLeave(e);}protected override void OnMouseDown(MouseEventArgs e){down=true;Invalidate();base.OnMouseDown(e);}protected override void OnMouseUp(MouseEventArgs e){down=false;Invalidate();base.OnMouseUp(e);}
   protected override void OnPaint(PaintEventArgs e){var g=e.Graphics;g.Clear(Parent==null?Ios.Background:Parent.BackColor);g.SmoothingMode=SmoothingMode.AntiAlias;Color fill=Enabled?BackColor:Color.FromArgb(230,230,237);if(Enabled&&(hover||down))fill=ControlPaint.Dark(fill,down?0.1f:0.035f);using(var p=Ios.Round(new RectangleF(1,1,Width-2,Height-2),11))using(var b=new SolidBrush(fill))g.FillPath(b,p);TextRenderer.DrawText(g,Text,Font,ClientRectangle,Enabled?ForeColor:Ios.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);if(Focused&&ShowFocusCues)using(var p=Ios.Round(new RectangleF(3,3,Width-6,Height-6),9))using(var pen=new Pen(Ios.Blue,1))g.DrawPath(pen,p);}
+ }
+ class IosColorButton:Button {
+  Color swatch=Color.White;bool selected;
+  public Color Swatch{get{return swatch;}set{swatch=value;Invalidate();}}
+  public bool Selected{get{return selected;}set{selected=value;Invalidate();}}
+  public IosColorButton(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;Height=46;Width=110;Cursor=Cursors.Hand;}
+  protected override void OnPaint(PaintEventArgs e){var g=e.Graphics;g.Clear(Parent==null?Color.White:Parent.BackColor);g.SmoothingMode=SmoothingMode.AntiAlias;using(var path=Ios.Round(new RectangleF(1,1,Width-3,Height-3),10)){using(var b=new SolidBrush(Selected?Color.FromArgb(235,242,253):Ios.Field))g.FillPath(b,path);if(Selected||(Focused&&ShowFocusCues))using(var pen=new Pen(Ios.Blue,1.4f))g.DrawPath(pen,path);}using(var b=new SolidBrush(Swatch))g.FillEllipse(b,10,(Height-22)/2,22,22);using(var pen=new Pen(Color.FromArgb(190,198,209),0.8f))g.DrawEllipse(pen,10,(Height-22)/2,22,22);TextRenderer.DrawText(g,Text,Font,new Rectangle(39,0,Width-44,Height),Selected?Ios.Blue:Ios.Ink,TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);}
  }
  class IosToggle:CheckBox {
   public IosToggle(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);Cursor=Cursors.Hand;Height=40;}
@@ -47,6 +54,7 @@ namespace ChatBureau {
  class IosChoice:Control {
   public class Choices:Collection<object>{public void AddRange(object[] items){foreach(var item in items)Add(item);}}
   readonly Choices items=new Choices();int selected=-1;
+  ContextMenuStrip popup;
   public Choices Items{get{return items;}}
   public ComboBoxStyle DropDownStyle{get;set;}
   public int SelectedIndex{get{return selected;}set{if(value<-1||value>=items.Count)throw new ArgumentOutOfRangeException();if(selected==value)return;selected=value;Invalidate();if(SelectedIndexChanged!=null)SelectedIndexChanged(this,EventArgs.Empty);}}
@@ -54,7 +62,19 @@ namespace ChatBureau {
   public event EventHandler SelectedIndexChanged;
   public IosChoice(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.Selectable,true);Height=36;Width=250;BackColor=Color.FromArgb(242,243,248);TabStop=true;Cursor=Cursors.Hand;AccessibleRole=AccessibleRole.ComboBox;}
   protected override void OnClick(EventArgs e){base.OnClick(e);Focus();Open();}
-  void Open(){var menu=new ContextMenuStrip{Font=Font};for(int i=0;i<items.Count;i++){int n=i;var entry=new ToolStripMenuItem(items[i].ToString()){Checked=n==selected};entry.Click+=delegate{SelectedIndex=n;};menu.Items.Add(entry);}menu.Closed+=delegate{menu.Dispose();};menu.Show(this,new Point(0,Height));}
+  // Windows still uses a dropdown after Closed fires. Keep it alive until its owner is disposed.
+  internal ContextMenuStrip Open(){
+   if(IsDisposed||Disposing||!Enabled||items.Count==0)return null;
+   if(popup==null){popup=new ContextMenuStrip{Font=Font,ShowImageMargin=false,ShowCheckMargin=true,Padding=new Padding(4)};}
+   if(popup.Visible)return popup;
+   if(popup.Items.Count!=items.Count){
+    while(popup.Items.Count>0){var obsolete=popup.Items[0];popup.Items.RemoveAt(0);obsolete.Dispose();}
+    for(int i=0;i<items.Count;i++){int n=i;var entry=new ToolStripMenuItem(items[i].ToString()){Padding=new Padding(10,6,12,6)};entry.Click+=delegate{if(!IsDisposed&&n<items.Count)SelectedIndex=n;};popup.Items.Add(entry);}
+   }
+   for(int i=0;i<items.Count;i++){var entry=(ToolStripMenuItem)popup.Items[i];entry.Text=items[i].ToString();entry.Checked=i==selected;}
+   popup.MinimumSize=new Size(Width,0);popup.Show(this,new Point(0,Height+3));return popup;
+  }
+  protected override void Dispose(bool disposing){if(disposing&&popup!=null){popup.Dispose();popup=null;}base.Dispose(disposing);}
   protected override bool IsInputKey(Keys k){return k==Keys.Up||k==Keys.Down||base.IsInputKey(k);}
   protected override void OnKeyDown(KeyEventArgs e){if(e.KeyCode==Keys.Space||e.KeyCode==Keys.Enter){Open();e.Handled=true;}else if(e.KeyCode==Keys.Down&&items.Count>0){SelectedIndex=Math.Min(items.Count-1,selected+1);e.Handled=true;}else if(e.KeyCode==Keys.Up&&items.Count>0){SelectedIndex=Math.Max(0,selected-1);e.Handled=true;}else base.OnKeyDown(e);}
   protected override void OnPaint(PaintEventArgs e){var g=e.Graphics;g.Clear(Parent==null?Ios.Background:Parent.BackColor);g.SmoothingMode=SmoothingMode.AntiAlias;using(var p=Ios.Round(new RectangleF(0,0,Width-1,Height-1),10))using(var b=new SolidBrush(BackColor))g.FillPath(b,p);TextRenderer.DrawText(g,SelectedItem==null?"Choisir…":SelectedItem.ToString(),Font,new Rectangle(12,0,Width-42,Height),Ios.Ink,TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);using(var pen=new Pen(Ios.Muted,1.5f))g.DrawLines(pen,new Point[]{new Point(Width-25,Height/2-2),new Point(Width-20,Height/2+3),new Point(Width-15,Height/2-2)});if(Focused&&ShowFocusCues)using(var p=Ios.Round(new RectangleF(1,1,Width-3,Height-3),10))using(var pen=new Pen(Ios.Blue))g.DrawPath(pen,p);}

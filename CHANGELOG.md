@@ -1,5 +1,13 @@
 ﻿# Historique
 
+## 1.2.0
+
+- Correction du crash des listes de pelages et d'accessoires : le menu Windows est conservé pendant sa fermeture et libéré uniquement avec son contrôle propriétaire.
+- Atelier affiné avec Impeccable : réglages regroupés, échantillons de couleur nommés, contrastes renforcés et état d'application explicite.
+- Écrans Habitudes et Image PNG simplifiés pour réduire le défilement.
+- Vérifications contre les régressions : 224 sélections via les menus, annulation, réouverture, fermeture de fenêtre et 216 combinaisons visuelles.
+- Préférences et images existantes conservées. Mise à jour disponible depuis l'application.
+
 ## 1.1.0
 
 - Atelier redessiné dans un style inspiré d’iOS : cartes arrondies, aperçu pastel, navigation segmentée, interrupteurs et curseurs personnalisés.

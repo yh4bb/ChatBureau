@@ -17,9 +17,9 @@ namespace ChatBureau {
   public UpdatePane(){
    BackColor=Ios.Background;Font=new Font("Segoe UI",10);AutoScroll=true;
    var layout=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(2)};Controls.Add(layout);
-   var hero=new IosCard{Width=536,Height=218,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,0,0,12),Padding=new Padding(20)};layout.Controls.Add(hero);
-   hero.Controls.Add(new Label{Text="MISE À JOUR LOGICIELLE",ForeColor=Ios.Muted,AutoSize=true,Font=new Font("Segoe UI",9,FontStyle.Bold),Margin=new Padding(0,0,0,12)});
-   hero.Controls.Add(new Label{Text="ChatBureau "+BuildInfo.Version,ForeColor=Ios.Ink,AutoSize=true,Font=new Font("Segoe UI",23,FontStyle.Bold),Margin=new Padding(0,0,0,12)});
+   var hero=new IosCard{Width=536,Height=180,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,0,0,12),Padding=new Padding(20)};layout.Controls.Add(hero);
+   
+   hero.Controls.Add(new Label{Text="ChatBureau "+BuildInfo.Version,ForeColor=Ios.Ink,AutoSize=true,Font=new Font("Segoe UI",22,FontStyle.Bold),Margin=new Padding(0,0,0,12)});
    status.Text="Prêt à rechercher une nouvelle version";status.Size=new Size(480,48);status.ForeColor=Ios.Ink;hero.Controls.Add(status);
    detail.Text="Vos réglages et vos personnages PNG sont conservés.";detail.Size=new Size(480,40);detail.ForeColor=Ios.Muted;hero.Controls.Add(detail);
    var actions=new IosCard{Width=536,Height=124,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,0,0,12)};layout.Controls.Add(actions);
