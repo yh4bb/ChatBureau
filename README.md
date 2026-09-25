@@ -9,6 +9,7 @@ Interface inspirée d’iOS : fenêtre arrondie, navigation verticale à gauche,
 Téléchargez `ChatBureau.exe` depuis **Releases**, placez-le dans un dossier où vous pouvez écrire, puis lancez-le. Windows 10/11 et .NET Framework 4.x sont nécessaires. Le binaire n'est pas signé numériquement.
 
 - Atelier avec aperçu animé : pelages, couleurs, motifs, chapeaux, accessoires et expressions.
+- **Apparence** : 12 couleurs prédéfinies, 10 motifs et couleurs libres. **Style** : six styles complets, choix aléatoire et annulation du dernier style ; sept accessoires de tête, lunettes, six expressions et couleurs du nez, des oreilles et du deuxième œil. Les styles complets activent le chat dessiné et conservent votre PNG dans sa catégorie.
 - Import PNG transparent, proportions conservées, image copiée localement à l'enregistrement.
 - Promenade, sieste, saut, étirement, toilette, salut, danse, pirouette, rebonds, secousse et bâillement.
 - Clic pour caresser, glisser pour porter, clic droit pour accéder aux options.

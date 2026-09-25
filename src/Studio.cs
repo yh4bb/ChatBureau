@@ -13,16 +13,19 @@ namespace ChatBureau {
   public int Coat=Color.FromArgb(235,234,219).ToArgb(),Eyes=Color.FromArgb(52,53,48).ToArgb(),Marking=Color.FromArgb(167,142,111).ToArgb(),Accessory=Color.FromArgb(115,130,211).ToArgb();
   public int Size=100,Speed=2,Frequency=6,Transparency=7;
   public bool Collar=false,Jump=true,Stretch=true,Groom=true,Wave=true,Sleep=true;
+  public bool InnerEars=false,Glasses=false,Heterochromia=false;
+  public int Nose=0,EarTint=Color.FromArgb(229,165,178).ToArgb(),OtherEye=Color.FromArgb(92,166,147).ToArgb();
   public Preferences Copy(){return (Preferences)MemberwiseClone();}
   public void Validate(){
    Name=string.IsNullOrWhiteSpace(Name)?"Mochi":Name.Trim();if(Name.Length>24)Name=Name.Substring(0,24);
    Size=Math.Max(60,Math.Min(200,Size));Speed=Math.Max(0,Math.Min(5,Speed));Frequency=Math.Max(3,Math.Min(30,Frequency));
    Transparency=Math.Max(0,Math.Min(16,Transparency));
-   if(Array.IndexOf(new string[]{"Uni","Tigré","Taches","Bicolore","Pois","Dos sombre"},Pattern)<0)Pattern="Uni";
-   if(Array.IndexOf(new string[]{"Aucun","Bonnet","Couronne","Nœud"},Hat)<0)Hat="Aucun";
-   if(Array.IndexOf(new string[]{"Ronds","Grands","Endormis"},EyeStyle)<0)EyeStyle="Ronds";
+   if(Array.IndexOf(Appearance.Patterns,Pattern)<0)Pattern="Uni";
+   if(Array.IndexOf(Appearance.Hats,Hat)<0)Hat="Aucun";
+   if(Array.IndexOf(Appearance.Eyes,EyeStyle)<0)EyeStyle="Ronds";
    PngPath=PngPath??"";
    Coat=Color.FromArgb(255,Color.FromArgb(Coat)).ToArgb();Eyes=Color.FromArgb(255,Color.FromArgb(Eyes)).ToArgb();Marking=Color.FromArgb(255,Color.FromArgb(Marking)).ToArgb();Accessory=Color.FromArgb(255,Color.FromArgb(Accessory)).ToArgb();
+   if(Nose!=0)Nose=Color.FromArgb(255,Color.FromArgb(Nose)).ToArgb();EarTint=Color.FromArgb(255,Color.FromArgb(EarTint)).ToArgb();OtherEye=Color.FromArgb(255,Color.FromArgb(OtherEye)).ToArgb();
   }
   public string[] Enabled(){var names=new List<string>();if(Jump)names.Add("Saut");if(Stretch)names.Add("Étirement");if(Groom)names.Add("Toilette");if(Wave)names.Add("Salut");if(Sleep)names.Add("Sieste");if(Dance)names.Add("Danse");if(Spin)names.Add("Pirouette");if(Bounce)names.Add("Rebonds");if(Shake)names.Add("Secousse");if(Yawn)names.Add("Bâillement");return names.ToArray();}
   public static string FilePath {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"ChatBureau","preferences.xml");}}
@@ -60,6 +63,10 @@ namespace ChatBureau {
   readonly IosChoice pattern=new IosChoice();
   readonly IosChoice hat=new IosChoice(),eyeStyle=new IosChoice();
   readonly IosToggle blush=new IosToggle(),whiskers=new IosToggle(),usePng=new IosToggle(),mirrorPng=new IosToggle();
+  readonly IosToggle innerEars=new IosToggle(),glasses=new IosToggle(),heterochromia=new IosToggle();
+  readonly Random styleRandom=new Random();
+  Preferences previousLook;
+  Button undoLook;
   readonly Label pngInfo=new Label();
   readonly IosToggle collar=new IosToggle();
   readonly IosSlider size=new IosSlider(),speed=new IosSlider(),frequency=new IosSlider(),transparency=new IosSlider();
@@ -93,11 +100,21 @@ namespace ChatBureau {
    var updatePage=new Panel{Text="Mises à jour"};tabs.TabPages.Add(updatePage);
    updates=new UpdatePane{Dock=DockStyle.Fill};updates.BeforeInstall=PrepareUpdate;updatePage.Controls.Add(updates);
    var style=Rows(details);var imageRows=Rows(images);
-   ConfigureChoice(hat,new string[]{"Aucun","Bonnet","Couronne","Nœud"},delegate{draft.Hat=(string)hat.SelectedItem;});
-   Row(style,"Accessoire",Stack(hat,new Label{Text="Couleur : choisissez « Collier » dans Apparence.",AutoSize=true,ForeColor=Ios.Muted}));
-   ConfigureChoice(eyeStyle,new string[]{"Ronds","Grands","Endormis"},delegate{draft.EyeStyle=(string)eyeStyle.SelectedItem;});
+   var looks=new FlowLayoutPanel{Width=492,Height=92,WrapContents=true};for(int i=0;i<Appearance.Styles.Length;i++){int n=i;var b=Button(Appearance.Styles[i],delegate{ApplyLook(n);});b.Width=156;b.Height=40;b.Margin=new Padding(0,0,8,6);looks.Controls.Add(b);}
+   var surprise=Button("Surprenez-moi",delegate{ApplyLook(-1);});surprise.Width=190;
+   undoLook=Button("Annuler le style",delegate{if(previousLook!=null){Appearance.CopyLook(previousLook,draft);previousLook=null;undoLook.Enabled=false;Bind();Changed();}});undoLook.Width=190;undoLook.Enabled=false;
+   var lookActions=new FlowLayoutPanel{Width=492,Height=42};lookActions.Controls.Add(surprise);lookActions.Controls.Add(undoLook);
+   Row(style,"Styles prêts à porter",Stack(looks,lookActions,new Label{Text="Change l’apparence du chat. Nom et habitudes conservés.\nVotre PNG reste disponible dans Image PNG.",AutoSize=true,ForeColor=Ios.Muted}));
+   ConfigureChoice(hat,Appearance.Hats,delegate{draft.Hat=(string)hat.SelectedItem;});
+   ConfigureCheck(glasses,"Lunettes rondes",delegate{draft.Glasses=glasses.Checked;});
+   var accentColor=ColorButton("Accessoire",190);Row(style,"Accessoires",Stack(hat,accentColor,glasses));
+   ConfigureChoice(eyeStyle,Appearance.Eyes,delegate{draft.EyeStyle=(string)eyeStyle.SelectedItem;});
    ConfigureCheck(blush,"Joues roses",delegate{draft.Blush=blush.Checked;});
-   ConfigureCheck(whiskers,"Moustaches",delegate{draft.Whiskers=whiskers.Checked;});Row(style,"Visage",Stack(Inline("Yeux",eyeStyle),blush,whiskers));
+   ConfigureCheck(whiskers,"Moustaches",delegate{draft.Whiskers=whiskers.Checked;});
+   ConfigureCheck(innerEars,"Intérieur des oreilles",delegate{draft.InnerEars=innerEars.Checked;});
+   ConfigureCheck(heterochromia,"Deux yeux de couleurs différentes",delegate{draft.Heterochromia=heterochromia.Checked;});
+   var detailsColors=new FlowLayoutPanel{Width=492,Height=46};detailsColors.Controls.Add(ColorButton("Nez",135));detailsColors.Controls.Add(ColorButton("Oreilles",135));detailsColors.Controls.Add(ColorButton("Autre œil",150));
+   Row(style,"Visage",Stack(Inline("Yeux",eyeStyle),heterochromia,innerEars,detailsColors,blush,whiskers));
    var import=Button("Importer un PNG…",delegate{ImportPng();});import.Width=200;
    pngInfo.AutoSize=true;pngInfo.MaximumSize=new Size(375,0);
    ConfigureCheck(usePng,"Remplacer le chat par mon image",delegate{draft.UsePng=usePng.Checked;});
@@ -107,11 +124,11 @@ namespace ChatBureau {
    var look=Rows(appearance);var habits=Rows(behavior);
    name.MaxLength=24;name.Width=296;name.BorderStyle=BorderStyle.None;name.BackColor=Ios.Field;name.AccessibleName="Nom du chat";name.Font=new Font("Segoe UI",12);name.TextChanged+=delegate{if(!binding){draft.Name=name.Text;Changed();}};var nameFrame=new IosCard{Width=328,Height=44,BackColor=Ios.Field,Padding=new Padding(14,10,14,8)};nameFrame.Controls.Add(name);Row(look,"Nom du compagnon",nameFrame);
    var presets=new FlowLayoutPanel{AutoSize=true,WrapContents=true,MaximumSize=new Size(420,0)};
-   string[] titles={"Ivoire","Charbon","Abricot","Sauge"};Color[] colors={Color.FromArgb(235,234,219),Color.FromArgb(53,55,52),Color.FromArgb(226,173,122),Color.FromArgb(160,184,159)};
+   string[] titles=Appearance.ColorNames;Color[] colors=Appearance.Colors;
    for(int i=0;i<titles.Length;i++){Color color=colors[i];var button=new IosColorButton{Text=titles[i],Swatch=color,Width=110,Margin=new Padding(0,0,6,0)};button.Click+=delegate{draft.Coat=color.ToArgb();draft.Eyes=(color.GetBrightness()<0.4f?Color.FromArgb(235,234,219):Color.FromArgb(52,53,48)).ToArgb();Bind();Changed();};paletteButtons.Add(button);presets.Controls.Add(button);}
    presets.MaximumSize=new Size(490,0);
-   var swatches=new FlowLayoutPanel{AutoSize=true};foreach(string key in new string[]{"Pelage","Yeux","Motifs","Collier"}){string k=key;var button=new IosColorButton{Text=k,Width=110,Height=42,Margin=new Padding(0,0,6,0)};button.Click+=delegate{PickColor(k);};colorButtons[k]=button;swatches.Controls.Add(button);}
-   pattern.DropDownStyle=ComboBoxStyle.DropDownList;pattern.Width=280;pattern.Items.AddRange(new object[]{"Uni","Tigré","Taches","Bicolore","Pois","Dos sombre"});pattern.SelectedIndexChanged+=delegate{if(!binding){draft.Pattern=(string)pattern.SelectedItem;Changed();}};
+   var swatches=new FlowLayoutPanel{AutoSize=true};foreach(string key in new string[]{"Pelage","Yeux","Motifs","Collier"})swatches.Controls.Add(ColorButton(key,110));
+   pattern.DropDownStyle=ComboBoxStyle.DropDownList;pattern.Width=280;pattern.Items.AddRange(Appearance.Patterns);pattern.SelectedIndexChanged+=delegate{if(!binding){draft.Pattern=(string)pattern.SelectedItem;Changed();}};
    Row(look,"Pelage et couleurs",Stack(presets,swatches,Inline("Motif",pattern)));
    collar.Text="Collier avec clochette";collar.AutoSize=true;collar.CheckedChanged+=delegate{if(!binding){draft.Collar=collar.Checked;Changed();}};
    SetupSlider(size,60,200,20);size.ValueChanged+=delegate{sizeValue.Text=size.Value+" %";if(!binding){draft.Size=size.Value;Changed();}};
@@ -122,7 +139,7 @@ namespace ChatBureau {
    foreach(string title in new string[]{"Saut","Étirement","Toilette","Salut","Sieste","Danse","Pirouette","Rebonds","Secousse","Bâillement"}){var check=new IosToggle{Text=title,AutoSize=false,Width=236,Height=40,Margin=new Padding(0,0,10,4)};checks[title]=check;check.CheckedChanged+=delegate{if(!binding){draft.Jump=checks["Saut"].Checked;draft.Stretch=checks["Étirement"].Checked;draft.Groom=checks["Toilette"].Checked;draft.Wave=checks["Salut"].Checked;draft.Sleep=checks["Sieste"].Checked;draft.Dance=checks["Danse"].Checked;draft.Spin=checks["Pirouette"].Checked;draft.Bounce=checks["Rebonds"].Checked;draft.Shake=checks["Secousse"].Checked;draft.Yawn=checks["Bâillement"].Checked;Changed();}};choices.Controls.Add(check);}Row(habits,"Animations spontanées",choices);
    Row(habits,"",new Label{Text="Décochez tout pour garder uniquement la promenade.\nLes animations restent disponibles dans le menu du chat.",AutoSize=true,ForeColor=Ios.Muted});
    var footer=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=3,RowCount=2,Padding=new Padding(0,12,0,0)};footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,110));footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,190));root.Controls.Add(footer,0,2);
-   var reset=Button("Réinitialiser",delegate{draft=new Preferences();Bind();Changed();});reset.Width=120;footer.Controls.Add(reset,0,0);
+   var reset=Button("Réinitialiser",delegate{draft=new Preferences();previousLook=null;undoLook.Enabled=false;Bind();Changed();});reset.Width=120;footer.Controls.Add(reset,0,0);
    var close=Button("Fermer",delegate{Close();});footer.Controls.Add(close,1,0);
    var save=Button("Appliquer au chat",delegate{Save();});saveButton=save;save.Enabled=false;save.Width=182;save.BackColor=Ios.Blue;save.ForeColor=Color.White;footer.Controls.Add(save,2,0);
    status.AutoSize=true;status.Text="Vos réglages sont enregistrés";status.ForeColor=Ios.Muted;footer.Controls.Add(status,0,1);footer.SetColumnSpan(status,3);
@@ -132,6 +149,8 @@ namespace ChatBureau {
    FormClosed+=delegate{clock.Stop();clock.Dispose();};
   }
   public void OpenUpdates(Updates.Release release=null){navigation.SelectedIndex=4;if(release!=null)updates.Offer(release);}
+  void ApplyLook(int index){previousLook=draft.Copy();if(index<0)Appearance.Randomize(draft,styleRandom);else Appearance.ApplyStyle(draft,index);undoLook.Enabled=true;Bind();Changed();}
+  IosColorButton ColorButton(string key,int width){var button=new IosColorButton{Text=key,Width=width,Height=42,Margin=new Padding(0,0,6,0)};button.Click+=delegate{PickColor(key);};colorButtons[key]=button;return button;}
   bool PrepareUpdate(){if(!dirty)return true;var choice=MessageBox.Show(this,"Enregistrer vos modifications avant de mettre à jour ?","ChatBureau",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question);if(choice==DialogResult.Cancel)return false;if(choice==DialogResult.Yes)return Save();dirty=false;return true;}
   void ConfigureChoice(IosChoice box,string[] items,Action change){box.Width=250;box.DropDownStyle=ComboBoxStyle.DropDownList;box.Items.AddRange(items);StyleCombo(box);box.SelectedIndexChanged+=delegate{if(!binding){change();Changed();}};}
   void ConfigureCheck(IosToggle box,string text,Action change){box.Text=text;box.AutoSize=true;box.CheckedChanged+=delegate{if(!binding){change();Changed();}};}
@@ -145,9 +164,9 @@ namespace ChatBureau {
   static void SetupSlider(IosSlider track,int min,int max,int tick){track.Minimum=min;track.Maximum=max;track.TickFrequency=tick;track.Width=280;track.Height=40;}
   static Control SliderPanel(IosSlider track,Label label){var panel=new FlowLayoutPanel{AutoSize=true};panel.Controls.Add(track);label.Width=85;label.Padding=new Padding(0,8,0,0);panel.Controls.Add(label);return panel;}
   void Changed(){dirty=true;if(saveButton!=null)saveButton.Enabled=true;status.ForeColor=Ios.Muted;status.Text="Aperçu modifié · prêt à appliquer";preview.Value=draft;preview.Invalidate();}
-  void Bind(){binding=true;transparency.Value=draft.Transparency;SetTransparency(draft.Transparency);name.Text=draft.Name;pattern.SelectedItem=draft.Pattern;collar.Checked=draft.Collar;size.Value=draft.Size;speed.Value=draft.Speed;frequency.Value=draft.Frequency;sizeValue.Text=draft.Size+" %";speedValue.Text=draft.Speed==0?"Immobile":draft.Speed+" / 5";frequencyValue.Text=draft.Frequency+" s";checks["Saut"].Checked=draft.Jump;checks["Étirement"].Checked=draft.Stretch;checks["Toilette"].Checked=draft.Groom;checks["Salut"].Checked=draft.Wave;checks["Sieste"].Checked=draft.Sleep;checks["Danse"].Checked=draft.Dance;checks["Pirouette"].Checked=draft.Spin;checks["Rebonds"].Checked=draft.Bounce;checks["Secousse"].Checked=draft.Shake;checks["Bâillement"].Checked=draft.Yawn;hat.SelectedItem=draft.Hat;eyeStyle.SelectedItem=draft.EyeStyle;blush.Checked=draft.Blush;whiskers.Checked=draft.Whiskers;usePng.Checked=draft.UsePng;mirrorPng.Checked=draft.MirrorPng;pngInfo.Text=string.IsNullOrEmpty(draft.PngPath)?"Aucune image importée":Path.GetFileName(draft.PngPath)+(File.Exists(draft.PngPath)?"":" — introuvable, retour au chat");foreach(var pair in colorButtons)pair.Value.Swatch=Color.FromArgb(GetColor(pair.Key));foreach(var button in paletteButtons)button.Selected=button.Swatch.ToArgb()==draft.Coat;preview.Value=draft;preview.Invalidate();binding=false;}
-  int GetColor(string key){return key=="Pelage"?draft.Coat:key=="Yeux"?draft.Eyes:key=="Motifs"?draft.Marking:draft.Accessory;}
-  void PickColor(string key){using(var picker=new ColorDialog{FullOpen=true,Color=Color.FromArgb(GetColor(key))})if(picker.ShowDialog(this)==DialogResult.OK){int color=picker.Color.ToArgb();if(key=="Pelage")draft.Coat=color;else if(key=="Yeux")draft.Eyes=color;else if(key=="Motifs")draft.Marking=color;else draft.Accessory=color;Bind();Changed();}}
+  void Bind(){binding=true;innerEars.Checked=draft.InnerEars;glasses.Checked=draft.Glasses;heterochromia.Checked=draft.Heterochromia;transparency.Value=draft.Transparency;SetTransparency(draft.Transparency);name.Text=draft.Name;pattern.SelectedItem=draft.Pattern;collar.Checked=draft.Collar;size.Value=draft.Size;speed.Value=draft.Speed;frequency.Value=draft.Frequency;sizeValue.Text=draft.Size+" %";speedValue.Text=draft.Speed==0?"Immobile":draft.Speed+" / 5";frequencyValue.Text=draft.Frequency+" s";checks["Saut"].Checked=draft.Jump;checks["Étirement"].Checked=draft.Stretch;checks["Toilette"].Checked=draft.Groom;checks["Salut"].Checked=draft.Wave;checks["Sieste"].Checked=draft.Sleep;checks["Danse"].Checked=draft.Dance;checks["Pirouette"].Checked=draft.Spin;checks["Rebonds"].Checked=draft.Bounce;checks["Secousse"].Checked=draft.Shake;checks["Bâillement"].Checked=draft.Yawn;hat.SelectedItem=draft.Hat;eyeStyle.SelectedItem=draft.EyeStyle;blush.Checked=draft.Blush;whiskers.Checked=draft.Whiskers;usePng.Checked=draft.UsePng;mirrorPng.Checked=draft.MirrorPng;pngInfo.Text=string.IsNullOrEmpty(draft.PngPath)?"Aucune image importée":Path.GetFileName(draft.PngPath)+(File.Exists(draft.PngPath)?"":" — introuvable, retour au chat");foreach(var pair in colorButtons)pair.Value.Swatch=Color.FromArgb(GetColor(pair.Key));foreach(var button in paletteButtons)button.Selected=button.Swatch.ToArgb()==draft.Coat;preview.Value=draft;preview.Invalidate();binding=false;}
+  int GetColor(string key){switch(key){case "Pelage":return draft.Coat;case "Yeux":return draft.Eyes;case "Motifs":return draft.Marking;case "Nez":return draft.Nose==0?draft.Eyes:draft.Nose;case "Oreilles":return draft.EarTint;case "Autre œil":return draft.OtherEye;default:return draft.Accessory;}}
+  void PickColor(string key){using(var picker=new ColorDialog{FullOpen=true,Color=Color.FromArgb(GetColor(key))})if(picker.ShowDialog(this)==DialogResult.OK){int color=picker.Color.ToArgb();switch(key){case "Pelage":draft.Coat=color;break;case "Yeux":draft.Eyes=color;break;case "Motifs":draft.Marking=color;break;case "Nez":draft.Nose=color;break;case "Oreilles":draft.EarTint=color;draft.InnerEars=true;break;case "Autre œil":draft.OtherEye=color;draft.Heterochromia=true;break;default:draft.Accessory=color;break;}Bind();Changed();}}
   bool Save(){try{draft.Validate();if(draft.UsePng)draft.PngPath=PngArt.Keep(draft.PngPath,Path.Combine(Path.GetDirectoryName(Preferences.FilePath),"images"));draft.Save(Preferences.FilePath);if(cat!=null)cat.ApplyOptions(draft);dirty=false;Bind();saveButton.Enabled=false;status.ForeColor=Color.FromArgb(32,116,75);status.Text="Réglages appliqués et enregistrés";return true;}catch(Exception ex){MessageBox.Show(this,"Impossible d’enregistrer : "+ex.Message,"ChatBureau",MessageBoxButtons.OK,MessageBoxIcon.Error);return false;}}
   public static void RunTests(string directory){
    Directory.CreateDirectory(directory);string path=Path.Combine(directory,"test-preferences.xml");
@@ -164,14 +183,20 @@ namespace ChatBureau {
     studio.draft=read.Copy();studio.Bind();
     foreach(Control item in studio.navigation.Navigation.Controls)if(item.Right>studio.navigation.Navigation.ClientSize.Width||item.Width<180)throw new Exception("Sidebar navigation is clipped");
     for(int i=0;i<12;i++){
-     var menu=studio.pattern.Open();((ToolStripMenuItem)menu.Items[i%6]).PerformClick();menu.Close();Application.DoEvents();
-     if(studio.draft.Pattern!=(string)studio.pattern.Items[i%6])throw new Exception("Pattern popup binding failed");
+     var menu=studio.pattern.Open();((ToolStripMenuItem)menu.Items[i%studio.pattern.Items.Count]).PerformClick();menu.Close();Application.DoEvents();
+     if(studio.draft.Pattern!=(string)studio.pattern.Items[i%studio.pattern.Items.Count])throw new Exception("Pattern popup binding failed");
     }
     studio.navigation.SelectedIndex=2;Application.DoEvents();
     for(int i=0;i<12;i++){
-     var menu=studio.hat.Open();((ToolStripMenuItem)menu.Items[i%4]).PerformClick();menu.Close();Application.DoEvents();
-     if(studio.draft.Hat!=(string)studio.hat.Items[i%4])throw new Exception("Accessory popup binding failed");
+     var menu=studio.hat.Open();((ToolStripMenuItem)menu.Items[i%studio.hat.Items.Count]).PerformClick();menu.Close();Application.DoEvents();
+     if(studio.draft.Hat!=(string)studio.hat.Items[i%studio.hat.Items.Count])throw new Exception("Accessory popup binding failed");
     }
+    studio.navigation.SelectedIndex=0;Application.DoEvents();
+    studio.navigation.SelectedIndex=2;Application.DoEvents();var beforeStyle=studio.draft.Copy();studio.ApplyLook(3);
+    if(studio.draft.Hat!="Chapeau de sorcier"||studio.hat.SelectedItem.ToString()!="Chapeau de sorcier"||!studio.innerEars.Checked||!studio.undoLook.Enabled)throw new Exception("Preset UI binding failed");
+    studio.undoLook.PerformClick();if(studio.draft.Hat!=beforeStyle.Hat||studio.draft.Coat!=beforeStyle.Coat||studio.undoLook.Enabled)throw new Exception("Undo style UI failed");
+    studio.glasses.Checked=true;studio.heterochromia.Checked=true;studio.innerEars.Checked=true;
+    if(!studio.draft.Glasses||!studio.draft.Heterochromia||!studio.draft.InnerEars)throw new Exception("New facial details binding failed");
     studio.navigation.SelectedIndex=0;Application.DoEvents();
     studio.size.Value=160;studio.name.Text="Pixel";studio.pattern.SelectedItem="Taches";studio.checks["Salut"].Checked=false;
     if(studio.draft.Size!=160||studio.draft.Name!="Pixel"||studio.draft.Pattern!="Taches"||studio.draft.Wave||!studio.dirty)throw new Exception("UI binding failed");
@@ -186,6 +211,9 @@ namespace ChatBureau {
     if(studio.draft.Hat!="Couronne"||!studio.draft.Blush||!studio.draft.Whiskers)throw new Exception("Style controls failed");
     studio.dirty=false;foreach(Control root in studio.Controls)SelectTab(root,2);Application.DoEvents();
     using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"style.png"));}
+    var faceRows=(FlowLayoutPanel)studio.navigation.TabPages[2].Controls[0];faceRows.AutoScrollPosition=new Point(0,faceRows.DisplayRectangle.Height);Application.DoEvents();
+    using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"visage.png"));}
+    faceRows.AutoScrollPosition=Point.Empty;
     foreach(Control root in studio.Controls)SelectTab(root,3);Application.DoEvents();
     using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"image-png.png"));}
     studio.OpenUpdates();Application.DoEvents();

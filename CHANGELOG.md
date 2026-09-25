@@ -1,5 +1,14 @@
 ﻿# Historique
 
+## 1.4.0
+
+- Palette étendue à 12 couleurs prédéfinies, avec toujours le choix libre des couleurs.
+- Quatre nouveaux motifs : Siamois, Masque, Ventre clair et Marbré (10 au total).
+- Fleur, Casquette, Haut-de-forme et Chapeau de sorcier ; lunettes rondes combinables avec tous les accessoires.
+- Expressions Étoiles, Cœurs et Clin d’œil ; deuxième œil de couleur différente, nez et intérieur des oreilles personnalisables.
+- Six styles prêts à porter dans Style, génération aléatoire et bouton Annuler le style. Nom, taille, habitudes et chemin du PNG conservés.
+- Compatibilité des anciens réglages et conservation du correctif des menus. Tests de 1 440 combinaisons et des chapeaux pendant le saut.
+
 ## 1.3.0
 
 - Interface avec fenêtre arrondie, catégories en colonne à gauche et aperçu du compagnon intégré à la barre latérale.

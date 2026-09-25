@@ -220,10 +220,12 @@ class Cat : Form {
       if(options.Pattern=="Pois")for(int x=47;x<96;x+=14)for(int y=91;y<117;y+=12)g.FillEllipse(marking,x,y,5,5);
       if(options.Pattern=="Dos sombre")g.FillEllipse(marking,32,73,62,31);
       if(options.Pattern=="Bicolore"){g.FillEllipse(marking,81,97,46,38);g.FillEllipse(marking,113,90,30,22);}
+      Appearance.DrawPattern(g,options,marking,stripe);
      }
      g.Restore(clip);
     }
    }
+   if(options!=null&&options.InnerEars)using(var tint=new SolidBrush(Color.FromArgb(options.EarTint))){g.FillPolygon(tint,new Point[]{new Point(101,62),new Point(107,69),new Point(98,70)});g.FillPolygon(tint,new Point[]{new Point(122,64),new Point(125,73),new Point(117,70)});}
    if(options!=null && options.Collar) {
     using(var collar=new Pen(Color.FromArgb(options.Accessory),4)){collar.StartCap=LineCap.Round;collar.EndCap=LineCap.Round;g.DrawLine(collar,105,102,115,105);}
     using(var bell=new SolidBrush(Color.FromArgb(242,192,83)))g.FillEllipse(bell,109,106,5,6);
@@ -237,7 +239,7 @@ class Cat : Form {
    }
    if(sleep||love||action=="Bâillement"||(options!=null&&options.EyeStyle=="Endormis")||action=="Toilette"||phase%19<0.45) {
     using(var pen=new Pen(face,1.6f)){g.DrawArc(pen,116,85,4,3,0,180);g.DrawArc(pen,130,84,4,3,0,180);}
-   } else {float eye=options!=null&&options.EyeStyle=="Grands"?5:3;g.FillEllipse(face,116,85,eye,eye);g.FillEllipse(face,130,84,eye,eye);}
+   } else {Appearance.DrawEye(g,face,options==null?"Ronds":options.EyeStyle,116,85,false);using(var secondEye=new SolidBrush(options!=null&&options.Heterochromia?Color.FromArgb(options.OtherEye):face.Color))Appearance.DrawEye(g,secondEye,options==null?"Ronds":options.EyeStyle,130,84,true);}
    if(options!=null){
     if(options.Blush)using(var pink=new SolidBrush(Color.FromArgb(215,234,151,159))){g.FillEllipse(pink,112,90,6,3);g.FillEllipse(pink,131,89,6,3);}
     if(options.Whiskers)using(var pen=new Pen(face,0.8f)){g.DrawLine(pen,115,91,105,88);g.DrawLine(pen,115,94,104,95);g.DrawLine(pen,133,92,143,89);g.DrawLine(pen,134,94,144,95);}
@@ -245,10 +247,12 @@ class Cat : Form {
      if(options.Hat=="Bonnet"){g.FillPie(accent,96,42,33,30,180,180);g.FillRectangle(accent,94,54,38,6);g.FillEllipse(Brushes.WhiteSmoke,108,36,10,10);}
      if(options.Hat=="Couronne"){g.FillPolygon(accent,new Point[]{new Point(98,58),new Point(95,39),new Point(106,48),new Point(113,34),new Point(121,48),new Point(133,39),new Point(129,58)});}
      if(options.Hat=="Nœud"){g.FillPolygon(accent,new Point[]{new Point(112,57),new Point(99,49),new Point(99,65)});g.FillPolygon(accent,new Point[]{new Point(112,57),new Point(126,49),new Point(126,65)});g.FillEllipse(accent,108,53,8,8);}
+     Appearance.DrawHat(g,options,accent);
+     if(options.Glasses)using(var rim=new Pen(accent,1.5f)){g.DrawEllipse(rim,112,81,11,10);g.DrawEllipse(rim,127,80,11,10);g.DrawLine(rim,123,85,127,85);g.DrawLine(rim,109,82,112,84);}
     }
    }
    if(action=="Bâillement")g.FillEllipse(face,123,91,5,2+8*envelope);
-   g.FillEllipse(face,125,89,2.8f,2);
+   using(var nose=new SolidBrush(options!=null&&options.Nose!=0?Color.FromArgb(options.Nose):face.Color))g.FillEllipse(nose,125,89,2.8f,2);
    using(var pen=new Pen(face,1.05f)){g.DrawArc(pen,121,89,5,4,15,135);g.DrawArc(pen,126,89,5,4,30,135);}
    if(love) {
     using(var heart=new SolidBrush(Color.FromArgb(225,119,135))){g.TranslateTransform(0,-(float)(phase%4)*2);g.FillEllipse(heart,103,32,9,9);g.FillEllipse(heart,110,32,9,9);g.FillPolygon(heart,new Point[]{new Point(104,38),new Point(118,38),new Point(111,47)});}

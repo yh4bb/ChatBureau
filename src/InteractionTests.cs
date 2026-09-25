@@ -11,8 +11,8 @@ namespace ChatBureau {
    using(var window=new Form{ClientSize=new Size(560,170),ShowInTaskbar=false,StartPosition=FormStartPosition.Manual,Location=new Point(40,40)})
    using(var pattern=new IosChoice{Location=new Point(15,20)})
    using(var hat=new IosChoice{Location=new Point(285,20)}){
-    pattern.Items.AddRange(new object[]{"Uni","Tigré","Taches","Bicolore","Pois","Dos sombre"});
-    hat.Items.AddRange(new object[]{"Aucun","Bonnet","Couronne","Nœud"});
+    pattern.Items.AddRange(Appearance.Patterns);
+    hat.Items.AddRange(Appearance.Hats);
     pattern.SelectedIndexChanged+=delegate{changes++;};hat.SelectedIndexChanged+=delegate{changes++;};
     window.Controls.Add(pattern);window.Controls.Add(hat);window.Show();Application.DoEvents();
     for(int i=0;i<100;i++){
@@ -30,13 +30,14 @@ namespace ChatBureau {
    }
    if(!firstPopup.IsDisposed||!secondPopup.IsDisposed)throw new Exception("Dropdown resources leaked after owner disposal");
    // Every supported coat/pattern/accessory combination must remain paintable.
-   string[] patterns={"Uni","Tigré","Taches","Bicolore","Pois","Dos sombre"};string[] hats={"Aucun","Bonnet","Couronne","Nœud"};
-   foreach(string pattern in patterns)foreach(string hat in hats)foreach(string eyes in new string[]{"Ronds","Grands","Endormis"})foreach(Color color in new Color[]{Color.Black,Color.White,Color.FromArgb(213,150,80)}){
-    var options=new Preferences{Pattern=pattern,Hat=hat,EyeStyle=eyes,Coat=color.ToArgb(),Collar=true,Whiskers=true,Blush=true};
+   int renders=0;
+   foreach(string pattern in Appearance.Patterns)foreach(string hat in Appearance.Hats)foreach(string eyes in Appearance.Eyes)foreach(Color color in new Color[]{Color.Black,Color.White,Color.FromArgb(213,150,80)}){
+    var options=new Preferences{Pattern=pattern,Hat=hat,EyeStyle=eyes,Coat=color.ToArgb(),Collar=true,Whiskers=true,Blush=true,Glasses=true,InnerEars=true,Heterochromia=true};renders++;
     using(var bitmap=new Bitmap(320,280))using(var graphics=Graphics.FromImage(bitmap))Cat.Draw(graphics,2,1.1,false,false,false,color,"Marche",0.5f,options);
    }
    using(var empty=Ios.Round(new RectangleF(0,0,0,0),12)){if(empty.PointCount!=0)throw new Exception("Zero-size painting guard failed");}
-   File.WriteAllText(Path.Combine(directory,"interaction-tests.txt"),"PASS: 200 popup selections, cancellation/reopening/cross-menu focus, owner disposal, 216 coat/accessory render combinations and zero-size layout.");
+   AppearanceTests.Run(directory);
+   File.WriteAllText(Path.Combine(directory,"interaction-tests.txt"),"PASS: 200 popup selections, cancellation/reopening/cross-menu focus, owner disposal, "+renders+" coat/accessory render combinations and zero-size layout.");
   }
  }
 }
