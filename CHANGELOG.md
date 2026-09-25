@@ -1,5 +1,14 @@
 ﻿# Historique
 
+## 1.3.0
+
+- Interface avec fenêtre arrondie, catégories en colonne à gauche et aperçu du compagnon intégré à la barre latérale.
+- Transparence réelle réglable de 0 à 16 %, enregistrée avec les préférences. Le réglage affecte toute la fenêtre, texte compris ; ce n'est pas un flou d'arrière-plan. Fond opaque en contraste élevé et en session distante.
+- Curseurs en forme de capsule avec reflet clair et point bleu, champ de nom arrondi et panneaux adaptatifs.
+- Transitions de sélection et de survol, interrupteurs animés sur 160 ms ; respect du réglage Windows de réduction des animations.
+- Fenêtre déplaçable depuis l'en-tête, redimensionnable par ses bords et réductible dans la barre des tâches.
+- Fonctionnement du chat, correction des menus, import PNG et mises à jour intégrées conservés.
+
 ## 1.2.0
 
 - Correction du crash des listes de pelages et d'accessoires : le menu Windows est conservé pendant sa fermeture et libéré uniquement avec son contrôle propriétaire.

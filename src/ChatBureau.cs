@@ -10,6 +10,7 @@ static class Program {
   if(args.Length>0 && args[0]=="--ui-test")Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
   Application.EnableVisualStyles();
   Application.SetCompatibleTextRenderingDefault(false);
+  if(args.Length>0 && args[0]=="--studio-preview"){Application.Run(new Studio(null));return;}
   if(args.Length>0 && args[0]=="--apply-update"){Updates.Install(args);return;}
   if(args.Length>0 && args[0]=="--update-test"){try{Updates.Tests(args[1]);}catch(Exception ex){System.IO.File.WriteAllText(System.IO.Path.Combine(args[1],"update-error.txt"),ex.ToString());Environment.Exit(1);}return;}
   if(args.Length>0 && args[0]=="--animation-test") {

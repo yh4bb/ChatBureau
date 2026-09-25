@@ -2,7 +2,7 @@
 
 Un compagnon de bureau pour Windows, personnalisable et compatible avec vos images PNG.
 
-Interface inspirée d’iOS : cartes arrondies, aperçu pastel et navigation par catégories.
+Interface inspirée d’iOS : fenêtre arrondie, navigation verticale à gauche, aperçu pastel et curseurs à reflets clairs. Le curseur **Transparence** de la barre latérale règle la transparence réelle de toute la fenêtre (texte compris), de 0 à 16 %. Cliquez sur **Appliquer au chat** pour conserver ce réglage. Il ne s'agit pas d'un flou d'arrière-plan. Le fond reste opaque en contraste élevé et en session distante.
 
 ## Utilisation
 

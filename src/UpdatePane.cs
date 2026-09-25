@@ -15,7 +15,7 @@ namespace ChatBureau {
   internal Func<Task<Updates.Release>> CheckRelease=()=>Task.Run(()=>Updates.Latest());
   internal Func<Updates.Release,Task<string>> DownloadRelease=r=>Task.Run(()=>Updates.Download(r));
   public UpdatePane(){
-   BackColor=Ios.Background;Font=new Font("Segoe UI",10);AutoScroll=true;
+   BackColor=Ios.Background;Font=new Font("Segoe UI",10);AutoScroll=false;
    var layout=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(2)};Controls.Add(layout);
    var hero=new IosCard{Width=536,Height=180,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,0,0,12),Padding=new Padding(20)};layout.Controls.Add(hero);
    
@@ -48,6 +48,7 @@ namespace ChatBureau {
   }
   internal string StatusText {get{return status.Text;}}
   internal bool CanInstall {get{return install.Enabled;}}
+  internal bool HasHorizontalOverflow {get{return ((ScrollableControl)Controls[0]).HorizontalScroll.Visible;}}
   public static void TestStates(){
    using(var pane=new UpdatePane()){
     pane.CheckRelease=()=>Task.FromResult<Updates.Release>(null);pane.CheckAsync().GetAwaiter().GetResult();if(pane.CanInstall||pane.Busy||!pane.StatusText.Contains("à jour"))throw new Exception("Current update state failed");
