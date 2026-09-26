@@ -1,5 +1,5 @@
 ﻿param(
- [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.4.0',
+ [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.5.0',
  [ValidatePattern('^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?$')][string]$Repository = '',
  [switch]$Test
 )
@@ -16,7 +16,8 @@ namespace ChatBureau { static class BuildInfo { public const string Version="$Ve
 "@ | Set-Content (Join-Path $buildDir 'BuildInfo.cs') -Encoding UTF8
 $sources = @(Get-ChildItem src -Filter '*.cs' | ForEach-Object FullName) + (Join-Path $buildDir 'BuildInfo.cs')
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-& $compiler /nologo /target:winexe /optimize+ /out:dist\ChatBureau.exe /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll /reference:System.Web.Extensions.dll $sources
+$wpf = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\WPF'
+& $compiler /nologo /target:winexe /optimize+ /out:dist\ChatBureau.exe /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll /reference:System.Web.Extensions.dll /reference:"$wpf\UIAutomationClient.dll" /reference:"$wpf\UIAutomationTypes.dll" /reference:"$wpf\WindowsBase.dll" $sources
 if ($LASTEXITCODE -ne 0) { throw 'Compilation échouée' }
 if ($Test) {
  $testDir=Join-Path $buildDir 'tests'

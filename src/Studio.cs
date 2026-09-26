@@ -83,7 +83,7 @@ namespace ChatBureau {
    AutoScaleMode=AutoScaleMode.Dpi;ClientSize=new Size(1000,760);MinimumSize=new Size(920,680);StartPosition=FormStartPosition.CenterScreen;
    var shell=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(10),ColumnCount=2,RowCount=1,Margin=new Padding(0)};shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,254));shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));Controls.Add(shell);
    var left=new RoundedLayout{Dock=DockStyle.Fill,BackColor=Color.FromArgb(238,242,247),Padding=new Padding(14,10,14,12),ColumnCount=1,RowCount=6,Margin=new Padding(0,0,12,0)};left.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-   left.RowStyles.Add(new RowStyle(SizeType.Absolute,58));left.RowStyles.Add(new RowStyle(SizeType.Absolute,232));left.RowStyles.Add(new RowStyle(SizeType.Percent,100));left.RowStyles.Add(new RowStyle(SizeType.Absolute,48));left.RowStyles.Add(new RowStyle(SizeType.Absolute,24));left.RowStyles.Add(new RowStyle(SizeType.Absolute,66));shell.Controls.Add(left,0,0);
+   left.RowStyles.Add(new RowStyle(SizeType.Absolute,58));left.RowStyles.Add(new RowStyle(SizeType.Absolute,277));left.RowStyles.Add(new RowStyle(SizeType.Percent,100));left.RowStyles.Add(new RowStyle(SizeType.Absolute,48));left.RowStyles.Add(new RowStyle(SizeType.Absolute,24));left.RowStyles.Add(new RowStyle(SizeType.Absolute,66));shell.Controls.Add(left,0,0);
    var brand=new Label{Text="ChatBureau",Font=new Font("Segoe UI",18,FontStyle.Bold),Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft};left.Controls.Add(brand,0,0);DragFrom(brand);
    var root=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(16,0,2,0),ColumnCount=1,RowCount=3,Margin=new Padding(0)};root.RowStyles.Add(new RowStyle(SizeType.Absolute,106));root.RowStyles.Add(new RowStyle(SizeType.Percent,100));root.RowStyles.Add(new RowStyle(SizeType.Absolute,100));shell.Controls.Add(root,1,0);
    var header=new Panel{Dock=DockStyle.Fill};var heading=new Label{Text="Apparence",Font=new Font("Segoe UI",24,FontStyle.Bold),AutoSize=true,Location=new Point(0,27)};var subtitle=new Label{Text="Son style, votre touche personnelle.",AutoSize=true,ForeColor=Ios.Muted,Location=new Point(2,72)};header.Controls.Add(heading);header.Controls.Add(subtitle);root.Controls.Add(header,0,0);DragFrom(header);DragFrom(heading);DragFrom(subtitle);
@@ -93,11 +93,11 @@ namespace ChatBureau {
    left.Controls.Add(new Label{Text="Aperçu en direct",Dock=DockStyle.Fill,Font=new Font("Segoe UI",9),ForeColor=Ios.Muted,TextAlign=ContentAlignment.MiddleCenter},0,4);
    var glass=new Panel{Dock=DockStyle.Fill,Margin=new Padding(0,8,0,0)};glass.Controls.Add(new Label{Text="Transparence",Dock=DockStyle.Top,Height=20,ForeColor=Ios.Muted,Font=new Font("Segoe UI",9)});transparency.Minimum=0;transparency.Maximum=16;transparency.Dock=DockStyle.Bottom;transparency.Height=36;transparency.AccessibleName="Transparence de la fenêtre, zéro pour un fond opaque";glass.Controls.Add(transparency);transparency.ValueChanged+=delegate{SetTransparency(transparency.Value);if(!binding){draft.Transparency=transparency.Value;Changed();}};left.Controls.Add(glass,0,5);
    var tabs=new IosTabs{Dock=DockStyle.Fill};navigation=tabs;root.Controls.Add(tabs,0,1);left.Controls.Add(tabs.Navigation,0,1);
-   string[] descriptions={"Son style, votre touche personnelle.","Un rythme qui vous ressemble.","Les petits détails font son caractère.","Votre image devient votre compagnon.","La dernière version, directement ici."};tabs.SelectedIndexChanged+=delegate{heading.Text=tabs.TabPages[tabs.SelectedIndex].Text;subtitle.Text=descriptions[tabs.SelectedIndex];};
+   string[] descriptions={"Son style, votre touche personnelle.","Un rythme qui vous ressemble.","Les petits détails font son caractère.","Votre image devient votre compagnon.","La dernière version, directement ici.","Un peu de malice, à votre rythme."};tabs.SelectedIndexChanged+=delegate{heading.Text=tabs.TabPages[tabs.SelectedIndex].Text;subtitle.Text=descriptions[tabs.SelectedIndex];};
    var appearance=new Panel{Text="Apparence" ,BackColor=Color.White};var behavior=new Panel{Text="Habitudes" ,BackColor=Color.White};tabs.TabPages.Add(appearance);tabs.TabPages.Add(behavior);
    var details=new Panel{Text="Style" ,BackColor=Color.White};tabs.TabPages.Add(details);
    var images=new Panel{Text="Image PNG" ,BackColor=Color.White};tabs.TabPages.Add(images);
-   var updatePage=new Panel{Text="Mises à jour"};tabs.TabPages.Add(updatePage);
+   var updatePage=new Panel{Text="Mises à jour"};tabs.TabPages.Add(updatePage);var prankPage=new Panel{Text="Farces"};tabs.TabPages.Add(prankPage);prankPage.Controls.Add(new MischiefPane(owner==null?null:owner.Pranks){Dock=DockStyle.Fill});
    updates=new UpdatePane{Dock=DockStyle.Fill};updates.BeforeInstall=PrepareUpdate;updatePage.Controls.Add(updates);
    var style=Rows(details);var imageRows=Rows(images);
    var looks=new FlowLayoutPanel{Width=492,Height=92,WrapContents=true};for(int i=0;i<Appearance.Styles.Length;i++){int n=i;var b=Button(Appearance.Styles[i],delegate{ApplyLook(n);});b.Width=156;b.Height=40;b.Margin=new Padding(0,0,8,6);looks.Controls.Add(b);}
@@ -149,6 +149,7 @@ namespace ChatBureau {
    FormClosed+=delegate{clock.Stop();clock.Dispose();};
   }
   public void OpenUpdates(Updates.Release release=null){navigation.SelectedIndex=4;if(release!=null)updates.Offer(release);}
+  public void OpenMischief(){navigation.SelectedIndex=5;}
   void ApplyLook(int index){previousLook=draft.Copy();if(index<0)Appearance.Randomize(draft,styleRandom);else Appearance.ApplyStyle(draft,index);undoLook.Enabled=true;Bind();Changed();}
   IosColorButton ColorButton(string key,int width){var button=new IosColorButton{Text=key,Width=width,Height=42,Margin=new Padding(0,0,6,0)};button.Click+=delegate{PickColor(key);};colorButtons[key]=button;return button;}
   bool PrepareUpdate(){if(!dirty)return true;var choice=MessageBox.Show(this,"Enregistrer vos modifications avant de mettre à jour ?","ChatBureau",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question);if(choice==DialogResult.Cancel)return false;if(choice==DialogResult.Yes)return Save();dirty=false;return true;}
@@ -216,6 +217,8 @@ namespace ChatBureau {
     faceRows.AutoScrollPosition=Point.Empty;
     foreach(Control root in studio.Controls)SelectTab(root,3);Application.DoEvents();
     using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"image-png.png"));}
+    studio.OpenMischief();Application.DoEvents();
+    using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"farces.png"));}
     studio.OpenUpdates();Application.DoEvents();
     using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"mises-a-jour.png"));}
     studio.ClientSize=new Size(920,680);Application.DoEvents();
@@ -226,9 +229,9 @@ namespace ChatBureau {
     if(studio.navigation.SelectedIndex!=4||!studio.updates.Visible)throw new Exception("Update category not reachable");
     studio.Close();
    }
-   using(var cat=new Cat()){cat.Show();cat.ApplyOptions(read);Application.DoEvents();if(cat.Width!=224||cat.Options.Name!=read.Name)throw new Exception("Desktop application of settings failed");cat.Close();}
+   using(var cat=new Cat()){cat.Show();cat.Pranks.Start(false,null,45,Mischief.Now);cat.ApplyOptions(read);Application.DoEvents();if(cat.Width!=224||cat.Options.Name!=read.Name)throw new Exception("Desktop application of settings failed");if(!cat.Pranks.Active)throw new Exception("Saving appearance disabled an idle prank session");cat.Close();}
    PngArt.Tests(directory);
-   InteractionTests.Run(directory);
+   InteractionTests.Run(directory);MischiefTests.Run(directory);
    File.WriteAllText(Path.Combine(directory,"test-results.txt"),"PASS: settings round-trip, bounds validation, malformed file recovery, UI controls binding, studio render, desktop settings application.");
   }
   static void SelectTab(Control c,int index){var tabs=c as IosTabs;if(tabs!=null)tabs.SelectedIndex=index;foreach(Control child in c.Controls)SelectTab(child,index);}

@@ -1,6 +1,6 @@
 # Atelier ChatBureau
 
-Mode de la surface : Operate. Référence approuvée : verre clair et commandes arrondies d'iOS, adaptés à Windows 10/11. Les cinq catégories forment une colonne à gauche, au-dessus du compagnon animé. L'en-tête à droite nomme la catégorie active. Conserver le bleu d'action et l'aperçu pastel.
+Mode de la surface : Operate. Référence approuvée : verre clair et commandes arrondies d'iOS, adaptés à Windows 10/11. Les six catégories forment une colonne à gauche, au-dessus du compagnon animé. L'en-tête à droite nomme la catégorie active. Conserver le bleu d'action et l'aperçu pastel.
 
 Typographie système Segoe UI : titres 22 pt, sections 11 pt semi-gras, champs 10–11 pt, aides 9 pt. Fond neutre très clair, surfaces blanches, texte principal sombre et texte secondaire suffisamment contrasté. Rayons de 12–16 px pour les panneaux, 9–10 px pour les contrôles. Accent bleu réservé à la sélection et à l'action principale. Couleurs du chat affichées sous forme d'échantillons avec noms lisibles.
 

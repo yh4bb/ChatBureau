@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -44,10 +44,12 @@ static class Program {
 }
 class Cat : Form {
  public Preferences Options=Preferences.Load();
+ public Mischief Pranks {get;private set;}
  Studio studio;
  public void ShowStudio() {if(studio==null||studio.IsDisposed)studio=new Studio(this);studio.Show();studio.Activate();}
  public void ShowUpdates(Updates.Release release=null){ShowStudio();studio.OpenUpdates(release);}
  public void ApplyOptions(Preferences value) {
+  if(Pranks!=null&&Pranks.Performing)Pranks.Stop();
   value.Validate();Options=value.Copy();coat=Color.FromArgb(Options.Coat);scale=Options.Size/100f;
   int bottom=Bottom;ClientSize=new Size((int)(160*scale),(int)(140*scale));Top=bottom-Height;
   tray.Text="ChatBureau · "+Options.Name;nextAction=Options.Frequency*30;action="Marche";sleeping=false;
@@ -73,6 +75,7 @@ class Cat : Form {
  protected override bool ShowWithoutActivation { get { return true; } }
  protected override CreateParams CreateParams { get { var p = base.CreateParams; p.ExStyle |= NoActivate | 0x80 | 0x80000; return p; } }
  public Cat() {
+  Pranks=new Mischief(new MischiefDesktop(this));
   FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; TopMost = true;
 
   DoubleBuffered = true; StartPosition = FormStartPosition.Manual;
@@ -83,6 +86,8 @@ class Cat : Form {
   menu.Items.Add("ChatBureau · votre petit compagnon").Enabled = false;
   menu.Items.Add("Personnaliser le chat…",null,delegate {ShowStudio();});
   menu.Items.Add("Mises à jour…",null,delegate {ShowUpdates();});
+  menu.Items.Add("Farces…",null,delegate {ShowStudio();studio.OpenMischief();});
+  var stopPranks=new ToolStripMenuItem("Arrêter les farces (Échap)",null,delegate{Pranks.Stop();});menu.Items.Add(stopPranks);menu.Opening+=delegate{stopPranks.Enabled=Pranks.Active;};
   menu.Items.Add(pauseItem);
   menu.Items.Add("Caresser", null, delegate { affection = 75; sleeping = false; action="Marche"; nextAction=120; });
   var animations = new ToolStripMenuItem("Animations");
@@ -99,13 +104,13 @@ class Cat : Form {
   ContextMenuStrip = menu;
   tray.Icon = SystemIcons.Information; tray.Text = "ChatBureau — clic droit pour les options"; tray.ContextMenuStrip = menu; tray.Visible = true;
   tray.DoubleClick += delegate { ShowStudio(); };
-  MouseDown += delegate(object s, MouseEventArgs e) { if(e.Button!=MouseButtons.Left)return; dragging=true; grab=e.Location; original=Location; Capture=true; sleeping=false; action="Marche"; actionFrame=0; };
+  MouseDown += delegate(object s, MouseEventArgs e) { if(e.Button!=MouseButtons.Left)return; Pranks.Stop(false);dragging=true; grab=e.Location; original=Location; Capture=true; sleeping=false; action="Marche"; actionFrame=0; };
   MouseMove += delegate(object s, MouseEventArgs e) { if(dragging) { Point p=Cursor.Position; Location=new Point(p.X-grab.X,p.Y-grab.Y); } };
   MouseUp += delegate(object s, MouseEventArgs e) { if(e.Button!=MouseButtons.Left)return; dragging=false; Capture=false; if(Math.Abs(Left-original.X)+Math.Abs(Top-original.Y)<8)affection=75; else BeginAction("Saut"); KeepInside(); };
   MouseCaptureChanged += delegate { if(!Capture)dragging=false; };
   ApplyOptions(Options);
   timer.Interval=33; timer.Tick += Tick; timer.Start();
-  FormClosed += delegate { if(studio!=null)studio.Close();timer.Stop(); timer.Dispose(); tray.Visible=false; tray.Dispose(); menu.Dispose(); };
+  FormClosed += delegate { Pranks.Dispose();if(studio!=null)studio.Close();timer.Stop(); timer.Dispose(); tray.Visible=false; tray.Dispose(); menu.Dispose(); };
  }
  
  void AddCoat(ToolStripMenuItem parent,string name,Color color) { parent.DropDownItems.Add(name,null,delegate {coat=color;RenderLayer();}); }
@@ -120,6 +125,7 @@ class Cat : Form {
  }
  void Tick(object sender,EventArgs e) {
   ticks++;
+  Pranks.Tick(Mischief.Now,paused||dragging||menu.Visible||(studio!=null&&studio.Visible));
   if(!paused && !menu.Visible) {
    phase+=0.15;
    if(affection>0)affection--;
@@ -127,7 +133,7 @@ class Cat : Form {
     if(action!="Marche") {
      actionFrame++;
      if(actionFrame>=actionDuration){action="Marche";sleeping=false;nextAction=Options.Frequency*30;}
-    } else if(affection==0) {
+    } else if(affection==0&&!Pranks.Performing) {
      Rectangle a=Screen.FromRectangle(Bounds).WorkingArea;
      Left+=left?-Options.Speed:Options.Speed;
      if(Left<=a.Left){Left=a.Left;left=false;}

@@ -17,6 +17,14 @@ Téléchargez `ChatBureau.exe` depuis **Releases**, placez-le dans un dossier o�
 
 Un PNG s'anime comme une image entière, sans animation indépendante des membres. Limites d'import : 16 Mo et 4 096 × 4 096 pixels.
 
+## Chat farceur
+
+Ouvrez **Farces** dans la colonne de gauche ou dans le menu du chat. Le mode **Visuel** fait venir le chat près du pointeur et sur les bords des fenêtres. Le mode **Interactif** donne un petit coup de défilement vers le bas ou le haut dans une fenêtre que vous choisissez dans la liste. Cliquez sur **Actualiser les fenêtres** si nécessaire. Le défilement dépend du support de l'accessibilité Windows par l'application : une fenêtre incompatible est ignorée.
+
+Réglez l'intervalle (15 à 180 secondes), cliquez sur **Activer pour cette session**, puis fermez l'atelier. La fenêtre choisie doit rester au premier plan. Le chat attend une pause dans vos frappes. Les champs de saisie, mots de passe et menus sont exclus ; aucune touche ni aucun clic ne sont injectés. Les titres de fenêtres servent uniquement à la sélection locale, sans enregistrement ni envoi.
+
+**Échap** arrête les farces. Vous pouvez aussi utiliser **Arrêter les farces** dans l'atelier ou le menu du chat. Déplacer le chat manuellement les arrête également. Chaque lancement repart avec les farces désactivées. L'application ne nécessite pas les droits administrateur et ne tente pas de contourner les restrictions Windows.
+
 ## Mises à jour
 
 L'application consulte les versions stables du dépôt GitHub public compilé dans l'exécutable. Elle propose la vérification quotidienne au lancement (désactivable dans la fenêtre des mises à jour) et n'installe rien sans clic sur **Installer**. Le téléchargement passe par HTTPS et son empreinte SHA-256 est contrôlée contre celle publiée par GitHub. Une sauvegarde `.previous` est conservée à côté de l'exécutable remplacé.

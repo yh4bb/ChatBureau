@@ -1,5 +1,13 @@
 ﻿# Historique
 
+## 1.5.0
+
+- Nouvelle catégorie **Farces** avec deux modes au choix : déplacements vers la souris et les fenêtres, ou petits coups de défilement dans une fenêtre explicitement choisie.
+- Activation pour la session uniquement, intervalle réglable de 15 à 180 secondes et arrêt par Échap, bouton ou menu du chat.
+- Pause pendant la personnalisation, les menus et la saisie ; le déplacement manuel du chat arrête les farces.
+- Le mode interactif utilise le défilement d'accessibilité Windows sur les applications compatibles. Aucune frappe de texte, aucun clic, aucun changement de focus. Une seule requête à la fois ; annulation si la fenêtre change.
+- Tests des deux modes, du ciblage, de la fréquence, de l'arrêt et du défilement natif sur une fenêtre de test ; vérification du refus des champs de saisie.
+
 ## 1.4.0
 
 - Palette étendue à 12 couleurs prédéfinies, avec toujours le choix libre des couleurs.

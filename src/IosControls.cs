@@ -102,6 +102,7 @@ namespace ChatBureau {
      case 1:g.DrawEllipse(pen,1,1,16,16);g.DrawLines(pen,new Point[]{new Point(9,4),new Point(9,9),new Point(13,11)});break;
      case 2:g.DrawPolygon(pen,new Point[]{new Point(2,5),new Point(6,8),new Point(9,2),new Point(12,8),new Point(16,5),new Point(14,15),new Point(4,15)});break;
      case 3:using(var p=Ios.Round(new RectangleF(1,1,16,16),3))g.DrawPath(pen,p);g.DrawEllipse(pen,10,4,3,3);g.DrawLines(pen,new Point[]{new Point(3,13),new Point(7,9),new Point(12,14),new Point(16,10)});break;
+     case 5:g.DrawEllipse(pen,5,9,9,7);g.DrawEllipse(pen,0,5,4,4);g.DrawEllipse(pen,5,0,4,5);g.DrawEllipse(pen,11,0,4,5);g.DrawEllipse(pen,16,5,3,4);break;
      default:g.DrawArc(pen,1,1,16,16,35,285);g.DrawLines(pen,new Point[]{new Point(12,0),new Point(17,3),new Point(17,-1)});break;
     }g.Restore(s);
    }
