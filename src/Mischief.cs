@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,7 +31,10 @@ namespace ChatBureau {
   long next,started;
   int interval,number,stage;
   bool interactive,disposed;
-  bool wasSuspended;
+  bool wasSuspended,tryNow;
+  public int RemainingSeconds {get{return Active?(int)Math.Max(0,(next-Now+999)/1000):0;}}
+  public bool Suspended {get{return wasSuspended;}}
+  public void TryNow(){if(!Active)throw new InvalidOperationException("Activez un mode avant de l’essayer.");tryNow=true;next=Now;Status="Essai prêt · fermez l’atelier et revenez dans la fenêtre choisie.";}
   PrankWindow target;
   public bool Active {get;private set;}
   public bool Performing {get{return stage!=0;}}
@@ -49,11 +52,11 @@ namespace ChatBureau {
    if(scrolling!=null&&scrolling.IsFaulted){var observed=scrolling.Exception;}scrolling=null;
    Stop();this.interactive=interactive;this.target=target;interval=Math.Max(15,Math.Min(180,intervalSeconds))*1000;next=now+3000;number=0;stage=0;wasSuspended=false;home=desktop.PetBounds.Location;Active=true;cancellation=new CancellationTokenSource();Status="Activé pour cette session · Échap pour arrêter.";
   }
-  public void Stop(bool restorePosition=true){if(cancellation!=null){cancellation.Cancel();cancellation.Dispose();cancellation=null;}if(restorePosition&&Active&&stage!=0)desktop.Move(MischiefMotion.Clamp(home,desktop.PetBounds.Size,desktop.Area(home)));Active=false;stage=0;Status="Farces arrêtées.";}
+  public void Stop(){if(cancellation!=null){cancellation.Cancel();cancellation.Dispose();cancellation=null;}Active=false;stage=0;tryNow=false;Status="Farces arrêtées.";}
   public void Tick(long now,bool suspended){
    if(!Active)return;
    if(desktop.EscapePressed){Stop();return;}
-   if(suspended){if(!wasSuspended){cancellation.Cancel();cancellation.Dispose();cancellation=new CancellationTokenSource();}wasSuspended=true;if(stage!=0){desktop.Move(MischiefMotion.Clamp(home,desktop.PetBounds.Size,desktop.Area(home)));stage=0;}next=now+interval;Status="En pause pendant vos réglages ou le déplacement du chat.";return;}wasSuspended=false;
+   if(suspended){if(!wasSuspended){cancellation.Cancel();cancellation.Dispose();cancellation=new CancellationTokenSource();}wasSuspended=true;if(stage!=0)stage=0;next=now+(tryNow?0:interval);Status="En pause · atelier, déplacement ou application plein écran.";return;}if(wasSuspended&&tryNow)next=now+1000;wasSuspended=false;
    if(scrolling!=null){
     if(!scrolling.IsCompleted){Status="La fenêtre répond… Échap pour arrêter.";return;}
     bool success=scrolling.Status==TaskStatus.RanToCompletion&&scrolling.Result;
@@ -68,18 +71,19 @@ namespace ChatBureau {
     if(interactive&&!bounds.HasValue){next=now+interval;return;}
     Point pointer=desktop.Pointer;bool windowPrank=(interactive||number%2==1)&&bounds.HasValue;var area=desktop.Area(windowPrank?new Point(bounds.Value.Left+bounds.Value.Width/2,bounds.Value.Top+bounds.Value.Height/2):pointer);
     destination=windowPrank?MischiefMotion.OnWindow(bounds.Value,desktop.PetBounds.Size,area):MischiefMotion.NearPointer(pointer,desktop.PetBounds.Size,area);
-    stage=1;started=now;number++;Status=interactive?"Il s’approche de votre fenêtre…":"Il vient réclamer votre attention…";
+    tryNow=false;stage=1;started=now;number++;Status=interactive?"Il s’approche de votre fenêtre…":"Il vient réclamer votre attention…";
    }
-   if(interactive&&!desktop.IsForeground(target)){Finish(now);Status="Fenêtre changée : farce annulée.";return;}
+   if(stage!=4&&interactive&&!desktop.IsForeground(target)){Finish(now);Status="Fenêtre changée : farce annulée.";return;}
    if(stage==1){
     var point=MischiefMotion.Approach(desktop.PetBounds.Location,destination,10);desktop.Move(point);
-    if(point==destination||now-started>3000){desktop.Move(destination);desktop.Paw();stage=2;started=now;}
+    if(point==destination){desktop.Paw();stage=2;started=now;}
    }else if(stage==2&&now-started>=800){
     stage=3;started=now;
     if(interactive&&!desktop.UserBusy&&desktop.IsForeground(target))scrolling=desktop.Scroll(target,number%2==1,cancellation.Token);
    }else if(stage==3&&now-started>=1400){Finish(now);}
+   else if(stage==4){var point=MischiefMotion.Approach(desktop.PetBounds.Location,destination,10);desktop.Move(point);if(point==destination){stage=0;next=now+interval;Status="De retour · il prépare sa prochaine farce.";}}
   }
-  void Finish(long now){desktop.Move(MischiefMotion.Clamp(home,desktop.PetBounds.Size,desktop.Area(home)));stage=0;next=now+interval;}
+  void Finish(long now){destination=MischiefMotion.Clamp(home,desktop.PetBounds.Size,desktop.Area(home));stage=4;Status="Il revient tranquillement…";}
   public void Dispose(){if(disposed)return;Stop();disposed=true;}
  }
 }

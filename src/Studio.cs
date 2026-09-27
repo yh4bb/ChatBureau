@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Drawing;
 using System.Windows.Forms;
@@ -15,7 +15,11 @@ namespace ChatBureau {
   public bool Collar=false,Jump=true,Stretch=true,Groom=true,Wave=true,Sleep=true;
   public bool InnerEars=false,Glasses=false,Heterochromia=false;
   public int Nose=0,EarTint=Color.FromArgb(229,165,178).ToArgb(),OtherEye=Color.FromArgb(92,166,147).ToArgb();
-  public Preferences Copy(){return (Preferences)MemberwiseClone();}
+  public string Personality="Joueur";
+  public bool ReactToActivity=true,FollowPointer=true,ExploreWindows=true,Discreet=true;
+  public string[] WalkFrames=new string[0],RestFrames=new string[0];
+  public int FrameRate=8;
+  public Preferences Copy(){var copy=(Preferences)MemberwiseClone();copy.WalkFrames=(string[])WalkFrames.Clone();copy.RestFrames=(string[])RestFrames.Clone();return copy;}
   public void Validate(){
    Name=string.IsNullOrWhiteSpace(Name)?"Mochi":Name.Trim();if(Name.Length>24)Name=Name.Substring(0,24);
    Size=Math.Max(60,Math.Min(200,Size));Speed=Math.Max(0,Math.Min(5,Speed));Frequency=Math.Max(3,Math.Min(30,Frequency));
@@ -24,6 +28,9 @@ namespace ChatBureau {
    if(Array.IndexOf(Appearance.Hats,Hat)<0)Hat="Aucun";
    if(Array.IndexOf(Appearance.Eyes,EyeStyle)<0)EyeStyle="Ronds";
    PngPath=PngPath??"";
+   if(Array.IndexOf(Character.Names,Personality)<0)Personality="Joueur";
+   FrameRate=Math.Max(1,Math.Min(24,FrameRate));
+   WalkFrames=SequenceArt.ValidatePaths(WalkFrames);RestFrames=SequenceArt.ValidatePaths(RestFrames);
    Coat=Color.FromArgb(255,Color.FromArgb(Coat)).ToArgb();Eyes=Color.FromArgb(255,Color.FromArgb(Eyes)).ToArgb();Marking=Color.FromArgb(255,Color.FromArgb(Marking)).ToArgb();Accessory=Color.FromArgb(255,Color.FromArgb(Accessory)).ToArgb();
    if(Nose!=0)Nose=Color.FromArgb(255,Color.FromArgb(Nose)).ToArgb();EarTint=Color.FromArgb(255,Color.FromArgb(EarTint)).ToArgb();OtherEye=Color.FromArgb(255,Color.FromArgb(OtherEye)).ToArgb();
   }
@@ -61,6 +68,9 @@ namespace ChatBureau {
   readonly Label status=new Label();
   readonly TextBox name=new TextBox();
   readonly IosChoice pattern=new IosChoice();
+  readonly IosChoice personality=new IosChoice();
+  readonly IosToggle react=new IosToggle(),follow=new IosToggle(),explore=new IosToggle(),discreet=new IosToggle();
+  readonly IosSlider fps=new IosSlider();readonly Label fpsValue=new Label(),sequenceInfo=new Label();
   readonly IosChoice hat=new IosChoice(),eyeStyle=new IosChoice();
   readonly IosToggle blush=new IosToggle(),whiskers=new IosToggle(),usePng=new IosToggle(),mirrorPng=new IosToggle();
   readonly IosToggle innerEars=new IosToggle(),glasses=new IosToggle(),heterochromia=new IosToggle();
@@ -77,7 +87,7 @@ namespace ChatBureau {
   Button saveButton;
   bool binding,dirty;
   int frame;
-  public Studio(Cat owner){
+  public Studio(Cat owner,string wardrobeFolder=null){
    cat=owner;draft=owner==null?new Preferences():owner.Options.Copy();
    Text="ChatBureau · Personnalisation";Font=new Font("Segoe UI",10);ForeColor=Ios.Ink;BackColor=Ios.Background;
    AutoScaleMode=AutoScaleMode.Dpi;ClientSize=new Size(1000,760);MinimumSize=new Size(920,680);StartPosition=FormStartPosition.CenterScreen;
@@ -93,16 +103,17 @@ namespace ChatBureau {
    left.Controls.Add(new Label{Text="Aperçu en direct",Dock=DockStyle.Fill,Font=new Font("Segoe UI",9),ForeColor=Ios.Muted,TextAlign=ContentAlignment.MiddleCenter},0,4);
    var glass=new Panel{Dock=DockStyle.Fill,Margin=new Padding(0,8,0,0)};glass.Controls.Add(new Label{Text="Transparence",Dock=DockStyle.Top,Height=20,ForeColor=Ios.Muted,Font=new Font("Segoe UI",9)});transparency.Minimum=0;transparency.Maximum=16;transparency.Dock=DockStyle.Bottom;transparency.Height=36;transparency.AccessibleName="Transparence de la fenêtre, zéro pour un fond opaque";glass.Controls.Add(transparency);transparency.ValueChanged+=delegate{SetTransparency(transparency.Value);if(!binding){draft.Transparency=transparency.Value;Changed();}};left.Controls.Add(glass,0,5);
    var tabs=new IosTabs{Dock=DockStyle.Fill};navigation=tabs;root.Controls.Add(tabs,0,1);left.Controls.Add(tabs.Navigation,0,1);
-   string[] descriptions={"Son style, votre touche personnelle.","Un rythme qui vous ressemble.","Les petits détails font son caractère.","Votre image devient votre compagnon.","La dernière version, directement ici.","Un peu de malice, à votre rythme."};tabs.SelectedIndexChanged+=delegate{heading.Text=tabs.TabPages[tabs.SelectedIndex].Text;subtitle.Text=descriptions[tabs.SelectedIndex];};
+   string[] descriptions={"Son style, votre touche personnelle.","Un rythme qui vous ressemble.","Les petits détails font son caractère.","Votre image devient votre compagnon.","La dernière version, directement ici.","Un peu de malice, à votre rythme.","Vos looks favoris, toujours à portée de patte."};tabs.SelectedIndexChanged+=delegate{heading.Text=tabs.TabPages[tabs.SelectedIndex].Text;subtitle.Text=descriptions[tabs.SelectedIndex];};
    var appearance=new Panel{Text="Apparence" ,BackColor=Color.White};var behavior=new Panel{Text="Habitudes" ,BackColor=Color.White};tabs.TabPages.Add(appearance);tabs.TabPages.Add(behavior);
    var details=new Panel{Text="Style" ,BackColor=Color.White};tabs.TabPages.Add(details);
    var images=new Panel{Text="Image PNG" ,BackColor=Color.White};tabs.TabPages.Add(images);
    var updatePage=new Panel{Text="Mises à jour"};tabs.TabPages.Add(updatePage);var prankPage=new Panel{Text="Farces"};tabs.TabPages.Add(prankPage);prankPage.Controls.Add(new MischiefPane(owner==null?null:owner.Pranks){Dock=DockStyle.Fill});
+   var wardrobe=new Panel{Text="Garde-robe"};tabs.TabPages.Add(wardrobe);wardrobe.Controls.Add(new WardrobePane(()=>draft,delegate(Preferences savedLook){previousLook=draft.Copy();Wardrobe.Apply(savedLook,draft);undoLook.Enabled=true;Bind();Changed();},wardrobeFolder){Dock=DockStyle.Fill});
    updates=new UpdatePane{Dock=DockStyle.Fill};updates.BeforeInstall=PrepareUpdate;updatePage.Controls.Add(updates);
    var style=Rows(details);var imageRows=Rows(images);
    var looks=new FlowLayoutPanel{Width=492,Height=92,WrapContents=true};for(int i=0;i<Appearance.Styles.Length;i++){int n=i;var b=Button(Appearance.Styles[i],delegate{ApplyLook(n);});b.Width=156;b.Height=40;b.Margin=new Padding(0,0,8,6);looks.Controls.Add(b);}
    var surprise=Button("Surprenez-moi",delegate{ApplyLook(-1);});surprise.Width=190;
-   undoLook=Button("Annuler le style",delegate{if(previousLook!=null){Appearance.CopyLook(previousLook,draft);previousLook=null;undoLook.Enabled=false;Bind();Changed();}});undoLook.Width=190;undoLook.Enabled=false;
+   undoLook=Button("Annuler le style",delegate{if(previousLook!=null){Wardrobe.Apply(previousLook,draft);previousLook=null;undoLook.Enabled=false;Bind();Changed();}});undoLook.Width=190;undoLook.Enabled=false;
    var lookActions=new FlowLayoutPanel{Width=492,Height=42};lookActions.Controls.Add(surprise);lookActions.Controls.Add(undoLook);
    Row(style,"Styles prêts à porter",Stack(looks,lookActions,new Label{Text="Change l’apparence du chat. Nom et habitudes conservés.\nVotre PNG reste disponible dans Image PNG.",AutoSize=true,ForeColor=Ios.Muted}));
    ConfigureChoice(hat,Appearance.Hats,delegate{draft.Hat=(string)hat.SelectedItem;});
@@ -120,8 +131,21 @@ namespace ChatBureau {
    ConfigureCheck(usePng,"Remplacer le chat par mon image",delegate{draft.UsePng=usePng.Checked;});
    ConfigureCheck(mirrorPng,"Retourner l’image selon la direction",delegate{draft.MirrorPng=mirrorPng.Checked;});
    var clear=Button("Revenir au chat",delegate{draft.UsePng=false;Bind();Changed();});clear.Width=170;Row(imageRows,"Votre personnage",Stack(import,pngInfo,usePng,mirrorPng,clear));
-   Row(imageRows,"Comment ça marche",new Label{AutoSize=true,MaximumSize=new Size(375,0),ForeColor=Ios.Muted,Text="Choisissez un PNG transparent pour éviter un fond visible.\nLes proportions sont conservées et l’image bouge en entier.\nLes membres ne sont pas animés séparément.\n\nUne copie est conservée à l’enregistrement : vous pouvez\ndéplacer le fichier d’origine. Maximum : 16 Mo, 4 096 × 4 096 px."});
+   var walk=Button("Images de marche…",delegate{ImportSequence(false);});walk.Width=215;var idle=Button("Images de repos…",delegate{ImportSequence(true);});idle.Width=215;
+   var frameButtons=new FlowLayoutPanel{Width=492,Height=44};frameButtons.Controls.Add(walk);frameButtons.Controls.Add(idle);
+   SetupSlider(fps,1,24,1);fps.ValueChanged+=delegate{fpsValue.Text=fps.Value+" im/s";if(!binding){draft.FrameRate=fps.Value;Changed();}};
+   sequenceInfo.AutoSize=true;sequenceInfo.MaximumSize=new Size(492,0);sequenceInfo.ForeColor=Ios.Muted;
+   var removeWalk=Button("Effacer la marche",delegate{draft.WalkFrames=new string[0];Bind();Changed();});removeWalk.Width=215;var removeRest=Button("Effacer le repos",delegate{draft.RestFrames=new string[0];Bind();Changed();});removeRest.Width=215;var clearFrames=new FlowLayoutPanel{Width=492,Height=42};clearFrames.Controls.Add(removeWalk);clearFrames.Controls.Add(removeRest);
+   Row(imageRows,"Un personnage qui s’anime",Stack(new Label{Text="Importez 2 à 24 PNG de même taille, numérotés 01, 02…\nMarche : animation habituelle. Repos : pendant la sieste.\nMaximum : 1 024 × 1 024 px par image.",AutoSize=true,ForeColor=Ios.Muted},frameButtons,sequenceInfo,Inline("Cadence",SliderPanel(fps,fpsValue)),clearFrames));
+   Row(imageRows,"Comment ça marche",new Label{AutoSize=true,MaximumSize=new Size(375,0),ForeColor=Ios.Muted,Text="Choisissez un PNG transparent pour éviter un fond visible.\nLes proportions sont conservées. Ajoutez des séquences\npour dessiner ses mouvements image par image.\n\nUne copie est conservée à l’enregistrement : vous pouvez\ndéplacer le fichier d’origine. Maximum : 16 Mo, 4 096 × 4 096 px."});
    var look=Rows(appearance);var habits=Rows(behavior);
+   ConfigureChoice(personality,Character.Names,delegate{draft.Personality=(string)personality.SelectedItem;});
+   ConfigureCheck(react,"Dormir en mon absence et saluer mon retour",delegate{draft.ReactToActivity=react.Checked;});
+   ConfigureCheck(follow,"Suivre la souris · Pot de colle et Farceur",delegate{draft.FollowPointer=follow.Checked;});
+   ConfigureCheck(explore,"Grimper et sauter entre les fenêtres",delegate{draft.ExploreWindows=explore.Checked;});
+   ConfigureCheck(discreet,"Mode discret dans les applications plein écran",delegate{draft.Discreet=discreet.Checked;});
+   Row(habits,"Sa personnalité",Stack(personality,new Label{Text="Calme : pauses longues. Joueur : sauts et danse.\nPot de colle : présence et salutations. Farceur : gestes malicieux.\nLes interactions avec les applications se règlent dans Farces.",AutoSize=true,ForeColor=Ios.Muted}));
+   Row(habits,"À vos côtés",Stack(react,follow,explore,discreet,new Label{Text="Il s’endort après 2 minutes d’inactivité. En plein écran,\nles déplacements et les farces sont suspendus.",AutoSize=true,ForeColor=Ios.Muted}));
    name.MaxLength=24;name.Width=296;name.BorderStyle=BorderStyle.None;name.BackColor=Ios.Field;name.AccessibleName="Nom du chat";name.Font=new Font("Segoe UI",12);name.TextChanged+=delegate{if(!binding){draft.Name=name.Text;Changed();}};var nameFrame=new IosCard{Width=328,Height=44,BackColor=Ios.Field,Padding=new Padding(14,10,14,8)};nameFrame.Controls.Add(name);Row(look,"Nom du compagnon",nameFrame);
    var presets=new FlowLayoutPanel{AutoSize=true,WrapContents=true,MaximumSize=new Size(420,0)};
    string[] titles=Appearance.ColorNames;Color[] colors=Appearance.Colors;
@@ -155,7 +179,8 @@ namespace ChatBureau {
   bool PrepareUpdate(){if(!dirty)return true;var choice=MessageBox.Show(this,"Enregistrer vos modifications avant de mettre à jour ?","ChatBureau",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question);if(choice==DialogResult.Cancel)return false;if(choice==DialogResult.Yes)return Save();dirty=false;return true;}
   void ConfigureChoice(IosChoice box,string[] items,Action change){box.Width=250;box.DropDownStyle=ComboBoxStyle.DropDownList;box.Items.AddRange(items);StyleCombo(box);box.SelectedIndexChanged+=delegate{if(!binding){change();Changed();}};}
   void ConfigureCheck(IosToggle box,string text,Action change){box.Text=text;box.AutoSize=true;box.CheckedChanged+=delegate{if(!binding){change();Changed();}};}
-  void ImportPng(){using(var picker=new OpenFileDialog{Title="Choisir un personnage PNG",Filter="Image PNG (*.png)|*.png",CheckFileExists=true})if(picker.ShowDialog(this)==DialogResult.OK){try{using(var image=PngArt.Read(picker.FileName)){}PngArt.Invalidate();draft.PngPath=picker.FileName;draft.UsePng=true;Bind();Changed();}catch(Exception ex){MessageBox.Show(this,"Impossible d’importer cette image : "+ex.Message,"Image PNG",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}}
+  void ImportPng(){using(var picker=new OpenFileDialog{Title="Choisir un personnage PNG",Filter="Image PNG (*.png)|*.png",CheckFileExists=true})if(picker.ShowDialog(this)==DialogResult.OK){try{using(var image=PngArt.Read(picker.FileName)){}PngArt.Invalidate();draft.PngPath=picker.FileName;draft.WalkFrames=new string[0];draft.RestFrames=new string[0];draft.UsePng=true;Bind();Changed();}catch(Exception ex){MessageBox.Show(this,"Impossible d’importer cette image : "+ex.Message,"Image PNG",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}}
+  void ImportSequence(bool resting){using(var picker=new OpenFileDialog{Title="Choisir 2 à 24 images numérotées",Filter="Images PNG (*.png)|*.png",Multiselect=true,CheckFileExists=true})if(picker.ShowDialog(this)==DialogResult.OK){try{var frames=SequenceArt.Import(picker.FileNames,Wardrobe.ImageFolder);if(resting)draft.RestFrames=frames;else draft.WalkFrames=frames;if(string.IsNullOrEmpty(draft.PngPath))draft.PngPath=frames[0];draft.UsePng=true;Bind();Changed();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Animation PNG",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}}
   static void StyleCombo(IosChoice combo){combo.Height=36;}
   static Control Stack(params Control[] children){var p=new FlowLayoutPanel{AutoSize=true,FlowDirection=FlowDirection.TopDown,WrapContents=false};foreach(var child in children){child.Margin=new Padding(0,0,0,7);p.Controls.Add(child);}return p;}
   static Control Inline(string text,Control control){var p=new FlowLayoutPanel{AutoSize=true};p.Controls.Add(new Label{Text=text,Width=104,Height=36,TextAlign=ContentAlignment.MiddleLeft,ForeColor=Ios.Muted});p.Controls.Add(control);return p;}
@@ -165,17 +190,17 @@ namespace ChatBureau {
   static void SetupSlider(IosSlider track,int min,int max,int tick){track.Minimum=min;track.Maximum=max;track.TickFrequency=tick;track.Width=280;track.Height=40;}
   static Control SliderPanel(IosSlider track,Label label){var panel=new FlowLayoutPanel{AutoSize=true};panel.Controls.Add(track);label.Width=85;label.Padding=new Padding(0,8,0,0);panel.Controls.Add(label);return panel;}
   void Changed(){dirty=true;if(saveButton!=null)saveButton.Enabled=true;status.ForeColor=Ios.Muted;status.Text="Aperçu modifié · prêt à appliquer";preview.Value=draft;preview.Invalidate();}
-  void Bind(){binding=true;innerEars.Checked=draft.InnerEars;glasses.Checked=draft.Glasses;heterochromia.Checked=draft.Heterochromia;transparency.Value=draft.Transparency;SetTransparency(draft.Transparency);name.Text=draft.Name;pattern.SelectedItem=draft.Pattern;collar.Checked=draft.Collar;size.Value=draft.Size;speed.Value=draft.Speed;frequency.Value=draft.Frequency;sizeValue.Text=draft.Size+" %";speedValue.Text=draft.Speed==0?"Immobile":draft.Speed+" / 5";frequencyValue.Text=draft.Frequency+" s";checks["Saut"].Checked=draft.Jump;checks["Étirement"].Checked=draft.Stretch;checks["Toilette"].Checked=draft.Groom;checks["Salut"].Checked=draft.Wave;checks["Sieste"].Checked=draft.Sleep;checks["Danse"].Checked=draft.Dance;checks["Pirouette"].Checked=draft.Spin;checks["Rebonds"].Checked=draft.Bounce;checks["Secousse"].Checked=draft.Shake;checks["Bâillement"].Checked=draft.Yawn;hat.SelectedItem=draft.Hat;eyeStyle.SelectedItem=draft.EyeStyle;blush.Checked=draft.Blush;whiskers.Checked=draft.Whiskers;usePng.Checked=draft.UsePng;mirrorPng.Checked=draft.MirrorPng;pngInfo.Text=string.IsNullOrEmpty(draft.PngPath)?"Aucune image importée":Path.GetFileName(draft.PngPath)+(File.Exists(draft.PngPath)?"":" — introuvable, retour au chat");foreach(var pair in colorButtons)pair.Value.Swatch=Color.FromArgb(GetColor(pair.Key));foreach(var button in paletteButtons)button.Selected=button.Swatch.ToArgb()==draft.Coat;preview.Value=draft;preview.Invalidate();binding=false;}
+  void Bind(){binding=true;personality.SelectedItem=draft.Personality;react.Checked=draft.ReactToActivity;follow.Checked=draft.FollowPointer;explore.Checked=draft.ExploreWindows;discreet.Checked=draft.Discreet;fps.Value=draft.FrameRate;fpsValue.Text=draft.FrameRate+" im/s";sequenceInfo.Text="Marche : "+draft.WalkFrames.Length+" images · Repos : "+draft.RestFrames.Length+" images";innerEars.Checked=draft.InnerEars;glasses.Checked=draft.Glasses;heterochromia.Checked=draft.Heterochromia;transparency.Value=draft.Transparency;SetTransparency(draft.Transparency);name.Text=draft.Name;pattern.SelectedItem=draft.Pattern;collar.Checked=draft.Collar;size.Value=draft.Size;speed.Value=draft.Speed;frequency.Value=draft.Frequency;sizeValue.Text=draft.Size+" %";speedValue.Text=draft.Speed==0?"Immobile":draft.Speed+" / 5";frequencyValue.Text=draft.Frequency+" s";checks["Saut"].Checked=draft.Jump;checks["Étirement"].Checked=draft.Stretch;checks["Toilette"].Checked=draft.Groom;checks["Salut"].Checked=draft.Wave;checks["Sieste"].Checked=draft.Sleep;checks["Danse"].Checked=draft.Dance;checks["Pirouette"].Checked=draft.Spin;checks["Rebonds"].Checked=draft.Bounce;checks["Secousse"].Checked=draft.Shake;checks["Bâillement"].Checked=draft.Yawn;hat.SelectedItem=draft.Hat;eyeStyle.SelectedItem=draft.EyeStyle;blush.Checked=draft.Blush;whiskers.Checked=draft.Whiskers;usePng.Checked=draft.UsePng;mirrorPng.Checked=draft.MirrorPng;pngInfo.Text=string.IsNullOrEmpty(draft.PngPath)?"Aucune image importée":Path.GetFileName(draft.PngPath)+(File.Exists(draft.PngPath)?"":" — introuvable, retour au chat");foreach(var pair in colorButtons)pair.Value.Swatch=Color.FromArgb(GetColor(pair.Key));foreach(var button in paletteButtons)button.Selected=button.Swatch.ToArgb()==draft.Coat;preview.Value=draft;preview.Invalidate();binding=false;}
   int GetColor(string key){switch(key){case "Pelage":return draft.Coat;case "Yeux":return draft.Eyes;case "Motifs":return draft.Marking;case "Nez":return draft.Nose==0?draft.Eyes:draft.Nose;case "Oreilles":return draft.EarTint;case "Autre œil":return draft.OtherEye;default:return draft.Accessory;}}
   void PickColor(string key){using(var picker=new ColorDialog{FullOpen=true,Color=Color.FromArgb(GetColor(key))})if(picker.ShowDialog(this)==DialogResult.OK){int color=picker.Color.ToArgb();switch(key){case "Pelage":draft.Coat=color;break;case "Yeux":draft.Eyes=color;break;case "Motifs":draft.Marking=color;break;case "Nez":draft.Nose=color;break;case "Oreilles":draft.EarTint=color;draft.InnerEars=true;break;case "Autre œil":draft.OtherEye=color;draft.Heterochromia=true;break;default:draft.Accessory=color;break;}Bind();Changed();}}
-  bool Save(){try{draft.Validate();if(draft.UsePng)draft.PngPath=PngArt.Keep(draft.PngPath,Path.Combine(Path.GetDirectoryName(Preferences.FilePath),"images"));draft.Save(Preferences.FilePath);if(cat!=null)cat.ApplyOptions(draft);dirty=false;Bind();saveButton.Enabled=false;status.ForeColor=Color.FromArgb(32,116,75);status.Text="Réglages appliqués et enregistrés";return true;}catch(Exception ex){MessageBox.Show(this,"Impossible d’enregistrer : "+ex.Message,"ChatBureau",MessageBoxButtons.OK,MessageBoxIcon.Error);return false;}}
+  bool Save(){try{draft.Validate();SequenceArt.Keep(draft,Wardrobe.ImageFolder);draft.Save(Preferences.FilePath);if(cat!=null)cat.ApplyOptions(draft);dirty=false;Bind();saveButton.Enabled=false;status.ForeColor=Color.FromArgb(32,116,75);status.Text="Réglages appliqués et enregistrés";return true;}catch(Exception ex){MessageBox.Show(this,"Impossible d’enregistrer : "+ex.Message,"ChatBureau",MessageBoxButtons.OK,MessageBoxIcon.Error);return false;}}
   public static void RunTests(string directory){
    Directory.CreateDirectory(directory);string path=Path.Combine(directory,"test-preferences.xml");
    var p=new Preferences{Name="Réglisse",Size=140,Speed=0,Pattern="Tigré",Collar=true,Jump=false,Sleep=false};p.Save(path);var read=Preferences.LoadFrom(path);
    if(read.Name!=p.Name||read.Size!=140||read.Speed!=0||read.Pattern!="Tigré"||!read.Collar||read.Enabled().Length!=8)throw new Exception("Persistence round-trip failed");
    p.Size=1000;p.Speed=-4;p.Frequency=0;p.Pattern="invalid";p.Validate();if(p.Size!=200||p.Speed!=0||p.Frequency!=3||p.Pattern!="Uni")throw new Exception("Validation failed");
    File.WriteAllText(path,"broken xml");if(Preferences.LoadFrom(path).Name!="Mochi")throw new Exception("Recovery failed");
-   using(var studio=new Studio(null)){
+   using(var studio=new Studio(null,Path.Combine(directory,"test-wardrobe"))){
     studio.Show();Application.DoEvents();studio.draft=read.Copy();studio.Bind();
     if(studio.Region==null||studio.Region.IsVisible(0,0)||!studio.Region.IsVisible(40,40))throw new Exception("Rounded studio frame failed");
     studio.transparency.Value=0;if(studio.Opacity!=1||studio.draft.Transparency!=0)throw new Exception("Opaque studio option failed");
@@ -217,6 +242,8 @@ namespace ChatBureau {
     faceRows.AutoScrollPosition=Point.Empty;
     foreach(Control root in studio.Controls)SelectTab(root,3);Application.DoEvents();
     using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"image-png.png"));}
+    studio.navigation.SelectedIndex=6;Application.DoEvents();var wardrobePane=(WardrobePane)studio.navigation.TabPages[6].Controls[0];for(int n=0;n<3;n++){var look=new Preferences();Appearance.ApplyStyle(look,n);wardrobePane.AddTile(new LookPackage{Title=Appearance.Styles[n],Look=look});}SettleAnimations();
+    using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"garde-robe.png"));}
     studio.OpenMischief();Application.DoEvents();
     using(var bitmap=new Bitmap(studio.Width,studio.Height)){studio.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(Path.Combine(directory,"farces.png"));}
     studio.OpenUpdates();Application.DoEvents();
@@ -231,7 +258,7 @@ namespace ChatBureau {
    }
    using(var cat=new Cat()){cat.Show();cat.Pranks.Start(false,null,45,Mischief.Now);cat.ApplyOptions(read);Application.DoEvents();if(cat.Width!=224||cat.Options.Name!=read.Name)throw new Exception("Desktop application of settings failed");if(!cat.Pranks.Active)throw new Exception("Saving appearance disabled an idle prank session");cat.Close();}
    PngArt.Tests(directory);
-   InteractionTests.Run(directory);MischiefTests.Run(directory);
+   InteractionTests.Run(directory);MischiefTests.Run(directory);CompanionTests.Run(directory);
    File.WriteAllText(Path.Combine(directory,"test-results.txt"),"PASS: settings round-trip, bounds validation, malformed file recovery, UI controls binding, studio render, desktop settings application.");
   }
   static void SelectTab(Control c,int index){var tabs=c as IosTabs;if(tabs!=null)tabs.SelectedIndex=index;foreach(Control child in c.Controls)SelectTab(child,index);}

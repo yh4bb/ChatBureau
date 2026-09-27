@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -102,6 +102,7 @@ namespace ChatBureau {
      case 1:g.DrawEllipse(pen,1,1,16,16);g.DrawLines(pen,new Point[]{new Point(9,4),new Point(9,9),new Point(13,11)});break;
      case 2:g.DrawPolygon(pen,new Point[]{new Point(2,5),new Point(6,8),new Point(9,2),new Point(12,8),new Point(16,5),new Point(14,15),new Point(4,15)});break;
      case 3:using(var p=Ios.Round(new RectangleF(1,1,16,16),3))g.DrawPath(pen,p);g.DrawEllipse(pen,10,4,3,3);g.DrawLines(pen,new Point[]{new Point(3,13),new Point(7,9),new Point(12,14),new Point(16,10)});break;
+     case 6:g.DrawArc(pen,6,0,6,6,180,270);g.DrawLines(pen,new Point[]{new Point(9,6),new Point(1,13),new Point(1,15),new Point(17,15),new Point(17,13),new Point(9,7)});break;
      case 5:g.DrawEllipse(pen,5,9,9,7);g.DrawEllipse(pen,0,5,4,4);g.DrawEllipse(pen,5,0,4,5);g.DrawEllipse(pen,11,0,4,5);g.DrawEllipse(pen,16,5,3,4);break;
      default:g.DrawArc(pen,1,1,16,16,35,285);g.DrawLines(pen,new Point[]{new Point(12,0),new Point(17,3),new Point(17,-1)});break;
     }g.Restore(s);
@@ -117,7 +118,7 @@ namespace ChatBureau {
   public Pages TabPages {get;private set;}
   public int SelectedIndex {get{return selected;}set{if(value<0||value>=TabPages.Count)return;bool changed=selected!=value;selected=value;for(int i=0;i<TabPages.Count;i++){TabPages[i].Visible=i==selected;var button=(IosNavButton)nav.Controls[i];button.Selected=i==selected;button.ForeColor=i==selected?Ios.Blue:Ios.Muted;}TabPages[selected].BringToFront();if(changed&&SelectedIndexChanged!=null)SelectedIndexChanged(this,EventArgs.Empty);}}
   public IosTabs(){BackColor=Ios.Background;TabPages=new Pages(this);nav.Dock=DockStyle.Fill;nav.ColumnCount=1;nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));nav.Padding=new Padding(0);nav.BackColor=Color.FromArgb(238,242,247);content.Dock=DockStyle.Fill;Controls.Add(content);}
-  void AddPage(Control page,int index){page.Dock=DockStyle.Fill;page.BackColor=Ios.Background;content.Controls.Add(page);var b=new IosNavButton{Text=page.Text,IconIndex=index,Dock=DockStyle.Fill,Font=new Font("Segoe UI",10),Margin=new Padding(0,0,0,5)};b.Click+=delegate{SelectedIndex=index;};nav.RowCount=TabPages.Count;nav.RowStyles.Add(new RowStyle(SizeType.Absolute,45));nav.Controls.Add(b,0,index);SelectedIndex=selected;}
+  void AddPage(Control page,int index){page.Dock=DockStyle.Fill;page.BackColor=Ios.Background;content.Controls.Add(page);var b=new IosNavButton{Text=page.Text,IconIndex=index,Dock=DockStyle.Fill,Font=new Font("Segoe UI",10),Margin=new Padding(0,0,0,5)};b.Click+=delegate{SelectedIndex=index;};nav.RowCount=TabPages.Count;nav.RowStyles.Add(new RowStyle(SizeType.Absolute,39));nav.Controls.Add(b,0,index);SelectedIndex=selected;}
   protected override void Dispose(bool disposing){if(disposing&&!nav.IsDisposed)nav.Dispose();base.Dispose(disposing);}
  }
 }

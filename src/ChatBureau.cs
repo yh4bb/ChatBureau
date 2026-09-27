@@ -46,13 +46,15 @@ class Cat : Form {
  public Preferences Options=Preferences.Load();
  public Mischief Pranks {get;private set;}
  Studio studio;
+ readonly CompanionLife life;
+ bool discreetNow;
  public void ShowStudio() {if(studio==null||studio.IsDisposed)studio=new Studio(this);studio.Show();studio.Activate();}
  public void ShowUpdates(Updates.Release release=null){ShowStudio();studio.OpenUpdates(release);}
  public void ApplyOptions(Preferences value) {
   if(Pranks!=null&&Pranks.Performing)Pranks.Stop();
-  value.Validate();Options=value.Copy();coat=Color.FromArgb(Options.Coat);scale=Options.Size/100f;
+  if(life!=null)life.Reset();value.Validate();Options=value.Copy();coat=Color.FromArgb(Options.Coat);scale=Options.Size/100f;
   int bottom=Bottom;ClientSize=new Size((int)(160*scale),(int)(140*scale));Top=bottom-Height;
-  tray.Text="ChatBureau · "+Options.Name;nextAction=Options.Frequency*30;action="Marche";sleeping=false;
+  tray.Text="ChatBureau · "+Options.Name;nextAction=Character.Delay(Options);action="Marche";sleeping=false;
   KeepInside();RenderLayer();
  }
  public void Play(string name) {paused=false;pauseItem.Checked=false;BeginAction(name);}
@@ -75,7 +77,7 @@ class Cat : Form {
  protected override bool ShowWithoutActivation { get { return true; } }
  protected override CreateParams CreateParams { get { var p = base.CreateParams; p.ExStyle |= NoActivate | 0x80 | 0x80000; return p; } }
  public Cat() {
-  Pranks=new Mischief(new MischiefDesktop(this));
+  life=new CompanionLife(this);Pranks=new Mischief(new MischiefDesktop(this));
   FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; TopMost = true;
 
   DoubleBuffered = true; StartPosition = FormStartPosition.Manual;
@@ -91,7 +93,7 @@ class Cat : Form {
   menu.Items.Add(pauseItem);
   menu.Items.Add("Caresser", null, delegate { affection = 75; sleeping = false; action="Marche"; nextAction=120; });
   var animations = new ToolStripMenuItem("Animations");
-  foreach(string name in new string[]{"Saut","Étirement","Toilette","Salut","Sieste","Danse","Pirouette","Rebonds","Secousse","Bâillement","Danse","Pirouette","Rebonds","Secousse","Bâillement"}) {
+  foreach(string name in new string[]{"Saut","Étirement","Toilette","Salut","Sieste","Danse","Pirouette","Rebonds","Secousse","Bâillement"}) {
    string selected=name; animations.DropDownItems.Add(name,null,delegate { paused=false;pauseItem.Checked=false;BeginAction(selected); });
   }
   menu.Items.Add(animations);
@@ -104,7 +106,7 @@ class Cat : Form {
   ContextMenuStrip = menu;
   tray.Icon = SystemIcons.Information; tray.Text = "ChatBureau — clic droit pour les options"; tray.ContextMenuStrip = menu; tray.Visible = true;
   tray.DoubleClick += delegate { ShowStudio(); };
-  MouseDown += delegate(object s, MouseEventArgs e) { if(e.Button!=MouseButtons.Left)return; Pranks.Stop(false);dragging=true; grab=e.Location; original=Location; Capture=true; sleeping=false; action="Marche"; actionFrame=0; };
+  MouseDown += delegate(object s, MouseEventArgs e) { if(e.Button!=MouseButtons.Left)return; Pranks.Stop();life.Reset();dragging=true; grab=e.Location; original=Location; Capture=true; sleeping=false; action="Marche"; actionFrame=0; };
   MouseMove += delegate(object s, MouseEventArgs e) { if(dragging) { Point p=Cursor.Position; Location=new Point(p.X-grab.X,p.Y-grab.Y); } };
   MouseUp += delegate(object s, MouseEventArgs e) { if(e.Button!=MouseButtons.Left)return; dragging=false; Capture=false; if(Math.Abs(Left-original.X)+Math.Abs(Top-original.Y)<8)affection=75; else BeginAction("Saut"); KeepInside(); };
   MouseCaptureChanged += delegate { if(!Capture)dragging=false; };
@@ -123,26 +125,32 @@ class Cat : Form {
   action=name;actionFrame=0;affection=0;sleeping=name=="Sieste";
   actionDuration=name=="Saut"?36:name=="Sieste"?210:100;
  }
+ internal void Face(bool facingLeft){left=facingLeft;}
+ internal void Rest(){sleeping=true;action="Sieste";actionFrame=0;}
  void Tick(object sender,EventArgs e) {
   ticks++;
-  Pranks.Tick(Mischief.Now,paused||dragging||menu.Visible||(studio!=null&&studio.Visible));
-  if(!paused && !menu.Visible) {
+  if(ticks%15==1)discreetNow=Options.Discreet&&MischiefDesktop.Fullscreen;
+  bool blocked=paused||dragging||menu.Visible||(studio!=null&&studio.Visible&&studio.WindowState!=FormWindowState.Minimized);
+  Pranks.Tick(Mischief.Now,blocked||discreetNow||Character.ShouldSleep(Options,MischiefDesktop.IdleMilliseconds));
+  if(Pranks.Performing)life.Reset();
+  bool handled=life.Tick(Mischief.Now,blocked||discreetNow||Pranks.Performing);
+  if(!paused && !menu.Visible && !discreetNow) {
    phase+=0.15;
    if(affection>0)affection--;
    if(!dragging) {
-    if(action!="Marche") {
+    if(action!="Marche"&&!life.Resting) {
      actionFrame++;
-     if(actionFrame>=actionDuration){action="Marche";sleeping=false;nextAction=Options.Frequency*30;}
-    } else if(affection==0&&!Pranks.Performing) {
+     if(actionFrame>=actionDuration){action="Marche";sleeping=false;nextAction=Character.Delay(Options);}
+    } else if(!handled&&action=="Marche"&&affection==0&&!Pranks.Performing) {
      Rectangle a=Screen.FromRectangle(Bounds).WorkingArea;
      Left+=left?-Options.Speed:Options.Speed;
      if(Left<=a.Left){Left=a.Left;left=false;}
      if(Right>=a.Right){Left=a.Right-Width;left=true;}
-     if(--nextAction<=0){var enabled=Options.Enabled();if(enabled.Length>0)BeginAction(enabled[random.Next(enabled.Length)]);nextAction=Options.Frequency*30;}
+     if(--nextAction<=0){string selected=Character.Pick(Options,random);if(selected!=null)BeginAction(selected);nextAction=Character.Delay(Options);}
     }
    }
   }
-  if(ticks%90==0 && !dragging)KeepInside();
+  if(ticks%90==0 && !dragging && !Pranks.Performing)KeepInside();
   RenderLayer();
  }
 
@@ -189,7 +197,7 @@ class Cat : Form {
   if(sleep){float breath=(float)Math.Sin(phase*0.45)*0.015f;g.TranslateTransform(80,128);g.ScaleTransform(1,0.73f+breath);g.TranslateTransform(-80,-128);}
   float bob=sleep?3:(float)Math.Sin(phase*2)*0.65f;
   g.TranslateTransform(0,bob);
-  if(options!=null && options.UsePng && PngArt.Draw(g,options.PngPath,phase,action,love))return;
+  if(options!=null && options.UsePng && PngArt.Draw(g,SequenceArt.Frame(options,phase,action),phase,action,love))return;
   // Rounded side silhouette, upright tail and tiny face, based on the visual reference.
   using(var body=new SolidBrush(coat)) using(var face=new SolidBrush(options!=null?Color.FromArgb(options.Eyes):coat.GetBrightness()<0.4f?Color.FromArgb(228,227,210):Color.FromArgb(52,53,48))) {
    using(var tail=new Pen(coat,11)) {

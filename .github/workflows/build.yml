@@ -1,4 +1,4 @@
-name: Build and release
+﻿name: Build and release
 on:
   push:
     branches: [main]
@@ -37,5 +37,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create $env:RELEASE_TAG dist/ChatBureau.exe dist/ChatBureau.exe.sha256 dist/ChatBureau-Windows.zip --verify-tag --title "ChatBureau $env:RELEASE_TAG" --generate-notes
+          gh release create $env:RELEASE_TAG dist/ChatBureau.exe dist/ChatBureau.exe.sha256 dist/ChatBureau-Windows.zip --verify-tag --title "ChatBureau $env:RELEASE_TAG" --notes-file RELEASE_NOTES.md
           if ($LASTEXITCODE -ne 0) { throw 'Publication échouée' }

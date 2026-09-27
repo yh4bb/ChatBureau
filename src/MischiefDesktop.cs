@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -16,7 +16,7 @@ namespace ChatBureau {
   public Rectangle PetBounds{get{return cat.Bounds;}}
   public Point Pointer{get{return Cursor.Position;}}
   public Rectangle Area(Point point){return Screen.FromPoint(point).WorkingArea;}
-  public void Move(Point point){cat.Location=point;}
+  public void Move(Point point){if(point.X!=cat.Left)cat.Face(point.X<cat.Left);cat.Location=point;}
   public void Paw(){cat.Play("Salut");}
   public bool EscapePressed{get{return (GetAsyncKeyState(0x1B)&0x8000)!=0;}}
   public bool UserBusy{get{return InputBusy();}}
@@ -27,6 +27,7 @@ namespace ChatBureau {
   [StructLayout(LayoutKind.Sequential)] struct GUIINFO {public uint Size,Flags;public IntPtr Active,Focus,Capture,MenuOwner,MoveSize,Caret;public RECT CaretRect;}
   delegate bool EnumWindow(IntPtr handle,IntPtr data);
   [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr window,StringBuilder name,int capacity);
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window,out uint pid);
   [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window,out RECT rect);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
@@ -37,6 +38,10 @@ namespace ChatBureau {
   [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
   [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref LASTINPUTINFO info);
   [DllImport("user32.dll")] static extern bool GetGUIThreadInfo(uint thread,ref GUIINFO info);
+  public static uint IdleMilliseconds {get{var input=new LASTINPUTINFO{Size=(uint)Marshal.SizeOf(typeof(LASTINPUTINFO))};return GetLastInputInfo(ref input)?unchecked((uint)Environment.TickCount-input.Time):0;}}
+  public static bool Fullscreen {get{IntPtr handle=GetForegroundWindow();uint pid;GetWindowThreadProcessId(handle,out pid);if(handle==IntPtr.Zero||pid==(uint)Process.GetCurrentProcess().Id||GetWindow(handle,4)!=IntPtr.Zero)return false;var name=new StringBuilder(256);GetClassName(handle,name,name.Capacity);if(name.ToString()=="Progman"||name.ToString()=="WorkerW")return false;RECT r;if(!GetWindowRect(handle,out r))return false;return Character.CoversScreen(Rectangle.FromLTRB(r.Left,r.Top,r.Right,r.Bottom),Screen.FromHandle(handle).Bounds);}}
+  public static List<Rectangle> Surfaces(){var found=new List<Rectangle>();var screen=Screen.FromPoint(Cursor.Position);foreach(var window in Windows()){RECT r;if(IsIconic(window.Handle)||!GetWindowRect(window.Handle,out r))continue;var bounds=Rectangle.FromLTRB(r.Left,r.Top,r.Right,r.Bottom);if(bounds.Width<220||bounds.Height<140||bounds.Top<screen.WorkingArea.Top+100||!screen.WorkingArea.IntersectsWith(bounds))continue;found.Add(bounds);if(found.Count==12)break;}return found;}
+  public static Task<string> Compatibility(PrankWindow target){return Task.Run(()=>{try{if(target==null||!IsWindowVisible(target.Handle))return "Fenêtre indisponible · actualisez la liste.";uint pid;GetWindowThreadProcessId(target.Handle,out pid);if(pid!=target.ProcessId)return "Fenêtre fermée · choisissez-la à nouveau.";var root=AutomationElement.FromHandle(target.Handle);var item=root.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.IsScrollPatternAvailableProperty,true));object pattern;if(item!=null&&!item.Current.IsPassword&&item.TryGetCurrentPattern(ScrollPattern.Pattern,out pattern)&&((ScrollPattern)pattern).Current.VerticallyScrollable)return "Défilement détecté · disponible hors saisie, au premier plan.";return "Aucun défilement détecté ici · essayez le mode visuel.";}catch(Exception ex){if(ex is OutOfMemoryException)throw;return "Compatibilité indisponible · essayez le mode visuel.";}});}
   static bool InputBusy(){var input=new LASTINPUTINFO{Size=(uint)Marshal.SizeOf(typeof(LASTINPUTINFO))};if(!GetLastInputInfo(ref input)||(uint)((uint)Environment.TickCount-input.Time)<1500)return true;var gui=new GUIINFO{Size=(uint)Marshal.SizeOf(typeof(GUIINFO))};if(!GetGUIThreadInfo(0,ref gui)||(gui.Flags&0x1E)!=0||gui.MenuOwner!=IntPtr.Zero||gui.Capture!=IntPtr.Zero||gui.Caret!=IntPtr.Zero)return true;foreach(int key in new int[]{1,2,4,0x10,0x11,0x12,0x1B,0x5B,0x5C})if((GetAsyncKeyState(key)&0x8000)!=0)return true;return false;}
   static bool Matches(PrankWindow target){
    if(target==null||GetForegroundWindow()!=target.Handle||!IsWindowVisible(target.Handle)||IsIconic(target.Handle))return false;
@@ -58,7 +63,7 @@ namespace ChatBureau {
    result.Sort((a,b)=>string.Compare(a.Title,b.Title,StringComparison.CurrentCultureIgnoreCase));return result;
   }
   public Task<bool> Scroll(PrankWindow target,bool down,CancellationToken token){
-   return ScrollCore(target,down,token,()=>AutomationElement.FocusedElement,()=>Matches(target)&&!InputBusy());
+   return ScrollCore(target,down,token,()=>AutomationElement.FocusedElement,()=>Matches(target)&&!InputBusy()&&(!cat.Options.Discreet||!Fullscreen)&&!Character.ShouldSleep(cat.Options,IdleMilliseconds));
   }
   internal static Task<bool> ScrollCore(PrankWindow target,bool down,CancellationToken token,Func<AutomationElement> focus,Func<bool> eligible){
    // UIA stays on a worker thread. At most one request can be in flight. No

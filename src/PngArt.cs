@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -7,9 +7,9 @@ using System.Security.Cryptography;
 
 namespace ChatBureau {
  static class PngArt {
-  static string cachedPath;
-  static Bitmap cached;
-  public static void Invalidate(){if(cached!=null)cached.Dispose();cached=null;cachedPath=null;}
+  static readonly System.Collections.Generic.Dictionary<string,Bitmap> cache=new System.Collections.Generic.Dictionary<string,Bitmap>();
+  static readonly System.Collections.Generic.Queue<string> order=new System.Collections.Generic.Queue<string>();
+  public static void Invalidate(){foreach(var b in cache.Values)if(b!=null)b.Dispose();cache.Clear();order.Clear();}
   public static Bitmap Read(string path){
    if(string.IsNullOrWhiteSpace(path)||!File.Exists(path))throw new IOException("Choisissez un fichier PNG existant.");
    using(var stream=File.OpenRead(path)){
@@ -37,7 +37,10 @@ namespace ChatBureau {
    }
   }
   public static bool Draw(Graphics g,string path,double phase,string action,bool love){
-   if(path!=cachedPath){Invalidate();cachedPath=path;try{cached=Read(path);}catch(IOException){}catch(ArgumentException){}catch(UnauthorizedAccessException){}catch(OutOfMemoryException){}}
+   path=path??"";Bitmap cached;
+   if(!cache.TryGetValue(path,out cached)){try{using(var source=Read(path)){float scale=Math.Min(1,256f/Math.Max(source.Width,source.Height));cached=new Bitmap(Math.Max(1,(int)(source.Width*scale)),Math.Max(1,(int)(source.Height*scale)));using(var canvas=Graphics.FromImage(cached)){canvas.InterpolationMode=InterpolationMode.HighQualityBicubic;canvas.DrawImage(source,new Rectangle(Point.Empty,cached.Size));}}}catch(IOException){}catch(ArgumentException){}catch(UnauthorizedAccessException){}catch(OutOfMemoryException){}
+    if(cache.Count>=64){string oldest=order.Dequeue();if(cache[oldest]!=null)cache[oldest].Dispose();cache.Remove(oldest);}cache[path]=cached;order.Enqueue(path);
+   }
    if(cached==null)return false;
    var state=g.Save();
    try {
